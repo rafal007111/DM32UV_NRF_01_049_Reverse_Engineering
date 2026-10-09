@@ -1,0 +1,8 @@
+﻿cluster,addresses,description,confidence
+Menu and input,03038500;0303B6AC;03048F50;0304D07C;03013078,"Menu render/dispatch, settings dispatch, confirmation, key dequeue.",mixed; see function catalog
+Scanner,0302E144;0302E1A4;0302E820;0302ECA0;0302ECE0;0302F388;0302F418,"Scan state, list candidates, native rows, mode, stop/start.",mixed; see function catalog
+Zone/codeplug,03055C90;0305660C,Zone locator and current channel.,mixed; see function catalog
+Home display,030317BC;03031B7C,Read source label at 3E196 in observed UI paths.,mixed; see function catalog
+DMR receive candidates,030239D4;03028644;03028BE4,Receive dispatch/state/data routines; partly inferred.,mixed; see function catalog
+CC setting,0301EC40;0305CCF0,Software/hardware CC filter setter path.,mixed; see function catalog
+TS setting candidate,0301ECC0,Receiver-state setter candidate; full RX path not traced.,mixed; see function catalog

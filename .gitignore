@@ -1,0 +1,12 @@
+analysis/inputs/*.bin
+analysis/reference/decompiled.c
+analysis/reference/disassembly.asm
+analysis/reference/calls.tsv
+*.gpr
+*.rep/
+build/
+*.o
+*.elf
+*.raw
+*.map
+__pycache__/

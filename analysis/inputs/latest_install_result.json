@@ -1,0 +1,15 @@
+{
+  "success": true,
+  "write_phase_entered": true,
+  "baseline_sha256": "568cb4e37a14104702c3c0deaa92f57086159fcddcfa3d5f53646db4aeecd819",
+  "target_sha256": "156a48723b20aadabab1a674f99c036c0319b2791667869d8b5e382128fc2e53",
+  "result": {
+    "changed_sectors": 28,
+    "changed_bytes": 2190,
+    "write_packets": 448,
+    "scanner_hooks_applied": true,
+    "full_target_verified": true,
+    "readback_sha256": "156a48723b20aadabab1a674f99c036c0319b2791667869d8b5e382128fc2e53"
+  },
+  "hardware_verified_by_owner": true
+}
