@@ -1,0 +1,108 @@
+{
+  "confidence": "code-verified",
+  "recovered": true,
+  "method": "pinned stock/current bytes, decoded stock BSR boundaries, byte-identical rebuilt module symbols",
+  "firmware_sha256": "aff6b4dc09dcce45847173defba26e94157cc628af86826e21e5af227bdc52dd",
+  "stock_image_sha256": "de7dbcbc9302396e1c35a3325328cdf307f107949faf705caafc1604311c97f0",
+  "installed_image_sha256": "156a48723b20aadabab1a674f99c036c0319b2791667869d8b5e382128fc2e53",
+  "module_sha256": "b66ca0640d5aa8878ce0fc85aa3fceaac0133f86fa92a8b6fa4747d90fd4a7a1",
+  "tool_version": "GNU objdump (GNU Binutils) 2.27",
+  "objdump_sha256": "4990557e664af0dc12b48d546968a58b89e668a53ddb69583a5eb04be8d0b42b",
+  "hardware_test_performed": false,
+  "stock_tables": [
+    {
+      "name": "scan_cn",
+      "descriptor_va": "0x30b90a8",
+      "table_va": "0x30b9060",
+      "count": 9,
+      "pointers": [
+        "0x30bd5a0",
+        "0x30bd5ac",
+        "0x30bd5b8",
+        "0x30bd5cc",
+        "0x30bd5e0",
+        "0x30bd5ec",
+        "0x30bd5fc",
+        "0x30bd60c",
+        "0x30bd61c"
+      ]
+    },
+    {
+      "name": "scan_en",
+      "descriptor_va": "0x30b90b0",
+      "table_va": "0x30b9084",
+      "count": 9,
+      "pointers": [
+        "0x30bd62c",
+        "0x30bd638",
+        "0x30bd644",
+        "0x30bd658",
+        "0x30bd66c",
+        "0x30bd67c",
+        "0x30bd688",
+        "0x30bd694",
+        "0x30bd6a0"
+      ]
+    },
+    {
+      "name": "other_cn",
+      "descriptor_va": "0x30b9700",
+      "table_va": "0x30b9650",
+      "count": 22,
+      "pointers": [
+        "0x30bdfac",
+        "0x30bdfb8",
+        "0x30bdfc4",
+        "0x30bdfd4",
+        "0x30bdfe0",
+        "0x30bdfec",
+        "0x30bdff4",
+        "0x30be000",
+        "0x30be00c",
+        "0x30be018",
+        "0x30be024",
+        "0x30be030",
+        "0x30be03c",
+        "0x30be044",
+        "0x30be050",
+        "0x30be05c",
+        "0x30be068",
+        "0x30be074",
+        "0x30be084",
+        "0x30be090",
+        "0x30be09c",
+        "0x30bd1b0"
+      ]
+    },
+    {
+      "name": "other_en",
+      "descriptor_va": "0x30b9708",
+      "table_va": "0x30b96a8",
+      "count": 22,
+      "pointers": [
+        "0x30be0a8",
+        "0x30be0b8",
+        "0x30be0c4",
+        "0x30be0d0",
+        "0x30be0d4",
+        "0x30be0e0",
+        "0x30be0ec",
+        "0x30be0fc",
+        "0x30be10c",
+        "0x30be118",
+        "0x30be124",
+        "0x30bd1d0",
+        "0x30be130",
+        "0x30be13c",
+        "0x30be14c",
+        "0x30be15c",
+        "0x30be168",
+        "0x30be170",
+        "0x30be180",
+        "0x30be18c",
+        "0x30be198",
+        "0x30be1a4"
+      ]
+    }
+  ]
+}

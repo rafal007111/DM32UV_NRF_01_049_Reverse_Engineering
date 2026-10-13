@@ -20,3 +20,7 @@ Function catalog: 2,171 entries, including 213 with decompiler warnings. Many en
 Build candidate module with firmware/start_build_scan_tick_fix.cmd. This produces a standalone module, not complete firmware, and does not access the radio. See docs/TOOLS.md for required tools.
 
 This is a private analysis repository containing vendor-derived material. Do not publish firmware binaries or full decompilation. Radio-specific backups must also be kept outside Git. Preserve official CPS/codeplug compatibility and stock PTT/TX behavior. TS Match and CC Match RX settings remain planned work.
+
+### Offline reproducibility repair (2026-10-13)
+
+See [docs/REPRODUCIBILITY.md](docs/REPRODUCIBILITY.md) for the host test runner, recovered menu/hook audits, and the installed-reference patch plan. The rebuilt 4458-byte module matches the installed image exactly; 58 guarded patches replay stock to the full installed SHA-256 in memory without producing an image file. The historical intermediate baseline and original installer remain unavailable. All 11 host tests passed with MSVC; no new hardware validation was performed.

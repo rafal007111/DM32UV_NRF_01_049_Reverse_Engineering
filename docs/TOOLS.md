@@ -11,3 +11,7 @@ Original workspace tool copies lived under work/tools and were not copied here. 
 Run firmware/start_build_scan_tick_fix.cmd to compile and link the standalone candidate module. It does not create full firmware or access COM ports. Ghidra scripts in analysis/ghidra_scripts assume the C-SKY payload is imported in a read-only project. Use the official wrapper's 256-byte header and verify payload hash before analysis. Do not export firmware from a read-only call review.
 
 Useful utilities: rg, Python, C-SKY objdump, a hex viewer, SHA256 tools and Ghidra's decompiler/disassembler. Keep local build and Ghidra databases out of Git.
+
+## Reproducibility commands
+
+See [REPRODUCIBILITY.md](REPRODUCIBILITY.md) for `firmware/tests/run_tests.py`, recovery of the three audit JSON inputs, and `plan_integration.py --profile installed-reference`. Host tests support MSVC/GCC/Clang command lines; the pinned target module build remains Windows/PowerShell. Legacy scanner build switches select the same current sources and canonical `firmware/build/scan_candidate` output.

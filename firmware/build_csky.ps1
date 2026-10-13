@@ -1,22 +1,32 @@
 param([string]$ToolchainRoot = '', [switch]$IncludeIntegrationCandidate, [switch]$IncludeScanCandidate, [switch]$IncludePickerEntryFix, [switch]$IncludeScanZoneTest, [switch]$IncludeScanZonePolish, [switch]$IncludeScanSourceFix, [switch]$IncludeScanTickFix)
 $ErrorActionPreference = 'Stop'
 $buildDirectory = Join-Path $PSScriptRoot 'build'
+if ($IncludeScanZoneTest -or $IncludeScanZonePolish -or $IncludeScanSourceFix -or $IncludeScanTickFix) {
+    Write-Warning 'Legacy Scan Zone switches are aliases for the current scanner sources, not historical variants. Output: build/scan_candidate.'
+}
 if ($IncludeScanTickFix) { $IncludeScanSourceFix = $true }
 if ($IncludeScanSourceFix) { $IncludeScanZonePolish = $true }
 if ($IncludeScanZonePolish) { $IncludeScanZoneTest = $true }
 if ($IncludeScanZoneTest) { $IncludeScanCandidate = $true }
 if ($IncludePickerEntryFix) {
     if ($IncludeScanCandidate) { throw 'Picker entry fix must be built separately from scanner.' }
+    Write-Warning 'IncludePickerEntryFix is an alias for current integration sources, not a historical variant.'
     $IncludeIntegrationCandidate = $true
-    $buildDirectory = Join-Path $buildDirectory 'picker_entry_fix'
+    $buildDirectory = Join-Path $buildDirectory 'integration_candidate'
 } elseif ($IncludeScanCandidate) {
     $IncludeIntegrationCandidate = $true
-    $buildDirectory = Join-Path $buildDirectory $(if ($IncludeScanTickFix) {'scan_tick_fix'} elseif ($IncludeScanSourceFix) {'scan_source_fix'} elseif ($IncludeScanZonePolish) {'scan_zone_polish'} elseif ($IncludeScanZoneTest) {'scan_zone_test'} else {'scan_candidate'})
+    $buildDirectory = Join-Path $buildDirectory 'scan_candidate'
 } elseif ($IncludeIntegrationCandidate) { $buildDirectory = Join-Path $buildDirectory 'integration_candidate' }
 New-Item -ItemType Directory -Path $buildDirectory -Force | Out-Null
 $logPath = Join-Path $buildDirectory ('build_'+[DateTime]::UtcNow.ToString('yyyyMMdd_HHmmss')+'_UTC.log.txt')
 Start-Transcript -LiteralPath $logPath | Out-Null
+$previousTemp = $env:TEMP
+$previousTmp = $env:TMP
 try {
+$temporaryDirectory = Join-Path $buildDirectory 'tmp'
+New-Item -ItemType Directory -Path $temporaryDirectory -Force | Out-Null
+$env:TEMP = $temporaryDirectory
+$env:TMP = $temporaryDirectory
 if (!$ToolchainRoot -and $env:DM32_CSKY_TOOLCHAIN) { $ToolchainRoot = $env:DM32_CSKY_TOOLCHAIN }
 if (!$ToolchainRoot) {
     $localCandidate = Join-Path $PSScriptRoot 'tools\csky-elfabiv2-tools-mingw-minilibc-20210423'
@@ -67,6 +77,8 @@ if ($IncludeScanCandidate) { Write-Host 'Experimental scan start/step drafts inc
     Write-Host ('BUILD FAILED: '+$_.Exception.Message)
     throw
 } finally {
+    $env:TEMP = $previousTemp
+    $env:TMP = $previousTmp
     Stop-Transcript | Out-Null
     Write-Host "Build log: $logPath"
 }

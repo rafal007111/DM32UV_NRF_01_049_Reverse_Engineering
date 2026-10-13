@@ -1,5 +1,6 @@
 #include <assert.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include "mod_core.h"
 #include "codeplug_reader.h"
 #include "firmware_zone_bridge.h"
@@ -18,9 +19,16 @@ void dm32_test_firmware_read(uint8_t block, uint16_t offset, void *data, uint16_
 int main(void) {
     dm32_zone_scan scan; dm32_zone_reader reader; dm32_storage storage;
     file_blocks blocks; unsigned zone, index; uint16_t channel = 0; long offset, size;
-    assert(fopen_s(&blocks.file, "C:/Users/Rafal/Downloads/TEMPLATE/DMR1.data", "rb") == 0);
+    const char *path = getenv("DM32_TEST_CODEPLUG");
+    if (!path || !*path) {
+        puts("SKIP: set DM32_TEST_CODEPLUG to the private DMR1 fixture capture");
+        return 77;
+    }
+    blocks.file = fopen(path, "rb");
+    if (!blocks.file) { perror(path); return 1; }
     for (index = 0; index < 256; ++index) blocks.offsets[index] = -1;
     assert(fseek(blocks.file, 0, SEEK_END) == 0); size = ftell(blocks.file);
+    assert(size > 0 && size % 4096 == 0);
     for (offset = 0; offset < size; offset += 4096) {
         int tag;
         assert(fseek(blocks.file, offset + 4095, SEEK_SET) == 0); tag = fgetc(blocks.file);

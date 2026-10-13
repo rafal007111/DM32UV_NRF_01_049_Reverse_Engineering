@@ -1,6 +1,8 @@
 """Read-only ELF/raw consistency and stock menu pointer audit. No firmware writes."""
 from pathlib import Path
 import sys, struct, hashlib, json
+if sys.flags.optimize:
+    raise SystemExit('Run without -O: this legacy audit requires assertions.')
 
 root = Path(__file__).resolve().parent
 build = Path(sys.argv[1]).resolve() if len(sys.argv) > 1 else root / 'build/integration_candidate'
@@ -57,16 +59,21 @@ if 'dm32_zone_start_tail' in symbols:
     tail_offset = symbols['dm32_zone_start_tail'] - base
     assert raw[tail_offset:tail_offset+16] == bytes.fromhex('d3 14 2d 14 03 6d 62 10 0c 78 00 00 98 f4 02 03'), 'Unexpected stock-frame shim'
     assert symbols['dm32_zone_start_tail'] % 4 == 0, 'Shim pool alignment'
-payload = (root / '../../work/inputs/DM32.NRF.01.049.payload.bin').resolve().read_bytes()
+payload = (root.parent / 'analysis/inputs/DM32.NRF.01.049.payload.bin').read_bytes()
+assert hashlib.sha256(payload).hexdigest() == '3711be95c10975c8f33073ad7a0b3c4d815e301bbcd389a4bd7ff7a0114acc63', 'Wrong NRF 01.049 payload'
 assert payload[base-0x0300c000:base-0x0300c000+0x1800] == bytes(0x1800)
 word = lambda a: struct.unpack_from('<I', raw, a-base)[0]
 menu_audit = json.loads((root / 'menu_tables_audit.json').read_text(encoding='utf-8-sig'))
+assert menu_audit['stock_image_sha256'] == 'de7dbcbc9302396e1c35a3325328cdf307f107949faf705caafc1604311c97f0'
 for category, symbol, new_count in [('scan', 'dm32_scan_menu_candidate', 10), ('other', 'dm32_other_menu_candidate', 24)]:
     descriptor = symbols[symbol]
     for language, slot in [('cn', 0), ('en', 1)]:
         ptr, count, kind, reserved = struct.unpack_from('<IBBH', raw, descriptor-base+8*slot)
         assert (count, kind, reserved) == (new_count, 2, 0)
         old = next(t for t in menu_audit['stock_tables'] if t['name'] == category+'_'+language)
+        assert old['count'] == len(old['pointers']) == new_count-len(['Scan Zone'] if category == 'scan' else ['TS Match', 'CC Match'])
+        stock_offset = int(old['table_va'], 16) - 0x0300c000
+        assert list(struct.unpack_from('<' + str(old['count']) + 'I', payload, stock_offset)) == [int(p,16) for p in old['pointers']]
         for i, expected in enumerate(old['pointers']): assert word(ptr+4*i) == int(expected, 16)
         expected_labels = ['Scan Zone'] if category == 'scan' else ['TS Match', 'CC Match']
         for i, label in enumerate(expected_labels, old['count']):
