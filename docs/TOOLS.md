@@ -23,13 +23,20 @@ See [REPRODUCIBILITY.md](REPRODUCIBILITY.md) for `firmware/tests/run_tests.py`, 
 - OpenJDK 25 (Ubuntu package).
 - GNU binutils 2.42 for `csky-elfabiv2` built from the Ubuntu source package into `/opt/csky-binutils` (`as`, `ld`, `objdump`, `objcopy`, `readelf`). Decodes CK803 code, e.g. `csky-elfabiv2-objdump -D -b binary -m csky:ck803 -EL`. Mnemonics may differ slightly from the pinned T-HEAD objdump 2.27.
 - Ghidra 12.1.4 PUBLIC (official GitHub release, zip SHA-256 `ddac49f903da9d5bac833e5cc79395098b9c33cfd3279be5f31bd00387d2d4db`, computed on download 2026-10-13; not compared with a vendor-published hash).
-- Ghidra has no built-in C-SKY module. The script installs `leommxj/ghidra_csky` at commit `589294d` with `analysis/ghidra_scripts/32b_data.fixed.sinc` replacing `32b_data.sinc`, then compiles SLEIGH. Language ID: `CSKY_V2:LE:32:default`. The base commit was inferred: its `32b_data.sinc` is the closest upstream version to the fixed file. Other local changes from the original workspace, if any, are unknown. Only the data/language part is installed; the module's ELF relocation handler (Java) is not built, which does not matter for raw payload imports.
+- Ghidra has no built-in C-SKY module. The script installs the legacy module from `analysis/ghidra_csky_module` (language `CSKY_V2:LE:32:default` version 0.2, supplied by the owner from the original Windows setup) and overlays `analysis/ghidra_scripts/32b_data.fixed.sinc`, then compiles SLEIGH. Only the data/language part is installed; the ELF relocation handler source is kept in the module directory but not built, which does not matter for raw payload or GZF imports.
 - Optional `--with-gcc`: upstream GCC 13.3 for `csky-elfabiv2` (C only, libgcc, ~25 min build). Useful for compile/link/size checks of `firmware/source` with `-mcpu=ck803`. It is **not** the pinned T-HEAD GCC 6.3.0 and does not reproduce the installed module bytes; byte-exact builds still require the T-HEAD toolchain. Checked 2026-10-13: all 12 scanner-candidate C modules compile with the build_csky.ps1 flags and `-Werror`, and the linked module is 4491 bytes (T-HEAD build: 4458) within the 0x1800 window.
 
 Load the environment with `source /opt/dm32-tools.env`. Headless Ghidra: `analyzeHeadless <projdir> <name> -import <payload> -processor CSKY_V2:LE:32:default -loader BinaryLoader -loader-baseAddr 0x0300C000`.
 
 Private inputs (`analysis/inputs/*.bin`) are not in Git, so a fresh cloud session has no firmware to analyze until the owner provides them. Host tests (`firmware/tests/run_tests.py`) and the checked-in `analysis/reference` exports work without them.
 
-### Known gap: legacy CSKY language version (2026-10-13)
+### Legacy CSKY module match (2026-10-13)
 
-`analysis/archives/DM32_NRF_049_correct_base.gzf` requires `CSKY_V2:LE:32:default` language version 0.2 or later. Every upstream `leommxj/ghidra_csky` commit declares 0.1, so the legacy Windows setup used a locally modified module beyond `32b_data.fixed.sinc`. With the cloud module the import fails. As a diagnostic only, raising the ldefs version to 0.2 let the GZF import, and `ExportNrfArchive.java inspect` reproduced the checked-in inventory exactly. Ghidra still reported 8 "Bad Instruction Prototype" sites that the cloud SLEIGH cannot decode, e.g. `c0006020`, `c0016420`, `c0807020`, `c0c07020` (control-register/PSR class) at `0300C002`, `0001018C`, `000105B8`, `00010640`, `00010646`. The diagnostic change was reverted. The original CSKY module directory from the legacy Ghidra installation is needed to match the database exactly.
+`analysis/archives/DM32_NRF_049_correct_base.gzf` requires CSKY language version 0.2; every upstream `leommxj/ghidra_csky` commit declares 0.1, so the earlier cloud reconstruction could not open it. The owner supplied the legacy module (upload zip SHA-256 `0525fa540c133939ec3be666205ec2e23feeed5fd7bbce29d3581c66f08be1ad`). Its `32b_data.sinc` lacks the two DM32 fixes in `32b_data.fixed.sinc` (`decne` and the `movih` zext form). Headless GZF import results:
+
+| Module variant | Bad instruction prototypes | Inventory vs checked-in |
+|---|---:|---|
+| Supplied module as-is | 1 (`decne` at `0300C06E`) | identical |
+| Supplied module + `32b_data.fixed.sinc` (installed by the script) | 0 | identical |
+
+The prebuilt `C-SKY.jar` from the zip was not committed or installed; its source (ELF relocation handler only) is in `analysis/ghidra_csky_module/src`.

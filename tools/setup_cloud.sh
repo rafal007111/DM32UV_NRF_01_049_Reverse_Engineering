@@ -6,7 +6,7 @@
 #   bash tools/setup_cloud.sh --with-gcc # also upstream GCC 13.3 for csky-elfabiv2 (~25 min)
 #
 # Tools land in /opt. Sources come from the Ubuntu archive (binutils, gcc-13),
-# the official Ghidra GitHub release and leommxj/ghidra_csky at a pinned commit.
+# the official Ghidra GitHub release and the legacy CSKY module in analysis/ghidra_csky_module.
 set -euo pipefail
 
 PREFIX=/opt/csky-binutils
@@ -15,10 +15,6 @@ GHIDRA_VERSION=12.1.4
 GHIDRA_DATE=20260921
 GHIDRA_DIR=/opt/ghidra_${GHIDRA_VERSION}_PUBLIC
 GHIDRA_ZIP_SHA256=ddac49f903da9d5bac833e5cc79395098b9c33cfd3279be5f31bd00387d2d4db
-CSKY_MODULE_REPO=https://github.com/leommxj/ghidra_csky
-# Base of analysis/ghidra_scripts/32b_data.fixed.sinc: its 32b_data.sinc matches
-# 2f3650a/589294d apart from the local DM32 fixes (later upstream adds declt/lrs).
-CSKY_MODULE_COMMIT=589294d
 REPO=$(cd "$(dirname "$0")/.." && pwd)
 WITH_GCC=0
 for arg in "$@"; do
@@ -85,17 +81,15 @@ if [ ! -x "$GHIDRA_DIR/support/analyzeHeadless" ]; then
 fi
 
 CSKY_DIR="$GHIDRA_DIR/Ghidra/Processors/CSKY"
+MODULE="$REPO/analysis/ghidra_csky_module"
 FIXED_SINC="$REPO/analysis/ghidra_scripts/32b_data.fixed.sinc"
 if [ ! -f "$CSKY_DIR/data/languages/csky_v2.sla" ] ||
-   ! cmp -s "$FIXED_SINC" "$CSKY_DIR/data/languages/32b_data.sinc"; then
-    log "Ghidra CSKY module $CSKY_MODULE_COMMIT + DM32 32b_data.sinc fix"
-    if [ ! -d "$SRC/ghidra_csky/.git" ]; then
-        git clone -q "$CSKY_MODULE_REPO" "$SRC/ghidra_csky"
-    fi
-    git -C "$SRC/ghidra_csky" checkout -q "$CSKY_MODULE_COMMIT"
+   ! cmp -s "$FIXED_SINC" "$CSKY_DIR/data/languages/32b_data.sinc" ||
+   ! diff -rq -x 32b_data.sinc -x '*.sla' "$MODULE/data" "$CSKY_DIR/data" >/dev/null; then
+    log "Ghidra CSKY module (legacy v0.2) + DM32 32b_data.sinc fix"
     rm -rf "$CSKY_DIR"
     mkdir -p "$CSKY_DIR"
-    cp -r "$SRC/ghidra_csky/CSKY/data" "$SRC/ghidra_csky/CSKY/Module.manifest" "$CSKY_DIR/"
+    cp -r "$MODULE/data" "$MODULE/Module.manifest" "$CSKY_DIR/"
     cp "$FIXED_SINC" "$CSKY_DIR/data/languages/32b_data.sinc"
     JAVA_HOME=$JAVA_HOME PATH="$JAVA_HOME/bin:$PATH" \
         "$GHIDRA_DIR/support/sleigh" -a "$CSKY_DIR/data/languages" >/dev/null
