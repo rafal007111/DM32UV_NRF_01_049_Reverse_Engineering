@@ -48,3 +48,5 @@ Code-verified: the current scanner module rebuilt with T-HEAD C-SKY Tools V3.10.
 - `0301ECC0` writes bit 0 of `11000100` and four RAM bytes; its caller `0304B158` is reached from many menu/settings routines. Its relation to the `Time Slot`/`Double Slot` menu strings at `030BE52C`/`030BE558` is unreviewed.
 
 `analysis/ghidra_scripts/DecompAt.java` decompiles functions by address in a read-only headless run and creates a temporary function where Ghidra has none.
+
+Detailed Monitor analysis (dispatch, setter state, RX data-type table, talkgroup filter bypass, lifetime and owner test): `docs/MONITOR_ANALYSIS.md`. It supersedes the "inferred" bullet above: Monitor is a temporary promiscuous **voice** mode (CC and talkgroup filtering bypassed for voice LC header/terminator/late entry), while PI header and packet data still require a matching CC.
