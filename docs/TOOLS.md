@@ -29,3 +29,7 @@ See [REPRODUCIBILITY.md](REPRODUCIBILITY.md) for `firmware/tests/run_tests.py`, 
 Load the environment with `source /opt/dm32-tools.env`. Headless Ghidra: `analyzeHeadless <projdir> <name> -import <payload> -processor CSKY_V2:LE:32:default -loader BinaryLoader -loader-baseAddr 0x0300C000`.
 
 Private inputs (`analysis/inputs/*.bin`) are not in Git, so a fresh cloud session has no firmware to analyze until the owner provides them. Host tests (`firmware/tests/run_tests.py`) and the checked-in `analysis/reference` exports work without them.
+
+### Known gap: legacy CSKY language version (2026-10-13)
+
+`analysis/archives/DM32_NRF_049_correct_base.gzf` requires `CSKY_V2:LE:32:default` language version 0.2 or later. Every upstream `leommxj/ghidra_csky` commit declares 0.1, so the legacy Windows setup used a locally modified module beyond `32b_data.fixed.sinc`. With the cloud module the import fails. As a diagnostic only, raising the ldefs version to 0.2 let the GZF import, and `ExportNrfArchive.java inspect` reproduced the checked-in inventory exactly. Ghidra still reported 8 "Bad Instruction Prototype" sites that the cloud SLEIGH cannot decode, e.g. `c0006020`, `c0016420`, `c0807020`, `c0c07020` (control-register/PSR class) at `0300C002`, `0001018C`, `000105B8`, `00010640`, `00010646`. The diagnostic change was reverted. The original CSKY module directory from the legacy Ghidra installation is needed to match the database exactly.
