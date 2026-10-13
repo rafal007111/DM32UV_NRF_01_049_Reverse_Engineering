@@ -1,5 +1,5 @@
 {
-  "note": "Private research inputs. The official updater container is versioned at the owner's request; the other binary inputs remain local and ignored. Do not publish publicly.",
+  "note": "Private research inputs. Official updater and owner-authorized stock/current program images are versioned. The derived payload remains ignored. Do not publish publicly.",
   "files": {
     "DM32_NRF_049_20251017.bin": {
       "bytes": 873964,
@@ -14,12 +14,12 @@
     "stock_progmem_1MiB.bin": {
       "bytes": 1048576,
       "sha256": "de7dbcbc9302396e1c35a3325328cdf307f107949faf705caafc1604311c97f0",
-      "git_ignored": true
+      "git_ignored": false
     },
     "current_scan_tick_fix.progmem.bin": {
       "bytes": 1048576,
       "sha256": "156a48723b20aadabab1a674f99c036c0319b2791667869d8b5e382128fc2e53",
-      "git_ignored": true
+      "git_ignored": false
     }
   }
 }

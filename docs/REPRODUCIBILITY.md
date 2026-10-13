@@ -47,8 +47,9 @@ python firmware/plan_integration.py firmware/build/scan_candidate --profile inst
 ```
 
 The official updater `analysis/inputs/DM32_NRF_049_20251017.bin` is versioned
-in this private repository at the owner's request. Supply the other three inputs
-listed in `analysis/inputs/manifest.json` locally; they remain ignored.
+in this private repository at the owner's request. The stock and installed program images are also versioned with owner authorization.
+Generate only the ignored payload locally by removing the updater's 256-byte header
+and verifying its manifest SHA-256.
 The audit uses the repo-relative payload path
 and checks its exact hash. The three recovered `firmware/*_audit.json` files for
 menu tables and routing are versionable evidence and require no external work
@@ -125,3 +126,7 @@ No radio access was used. Existing owner verification is preserved as historical
 evidence; byte identity and host tests do not independently establish CPS,
 PTT/TX or RF behavior. TS/CC model functions remain separate from actual RX
 integration, and the final frame/audio disposition remains unresolved.
+
+### Legacy recovery follow-up (2026-10-13)
+
+The actual 2171-function Ghidra database is now available as `analysis/archives/DM32_NRF_049_correct_base.gzf`; stock and installed program images are versioned with owner authorization. The exact 568cb4e3 intermediate was found in the legacy Documents/Codex workspace, and both historical byte deltas are verified. This supersedes earlier missing-baseline statements; full historical build/installer provenance remains unreviewed. See [LEGACY_RECOVERY.md](LEGACY_RECOVERY.md).

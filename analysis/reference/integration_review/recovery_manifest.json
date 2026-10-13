@@ -1,0 +1,110 @@
+{
+  "source": "outputs/DM32UV_NRF_poprawiona_baza/integration_review",
+  "files": [
+    {
+      "legacy_path": "integration_callers.tsv",
+      "repository_path": "analysis/reference/integration_review/integration_callers.tsv",
+      "sha256": "9042517ac75646f363273e0fb43d71a5f698c1540f3dd3436a8b91a1da372eee",
+      "bytes": 4829,
+      "already_present": false
+    },
+    {
+      "legacy_path": "key_routing/integration_callers.tsv",
+      "repository_path": "analysis/reference/key_routing/integration_callers.tsv",
+      "sha256": "93e308c77065cf62794f2821d918aa30e8ad240ea34a71bab09efaa97b5656c8",
+      "bytes": 5667,
+      "already_present": true
+    },
+    {
+      "legacy_path": "key_routing/ram_boundary_literals.tsv",
+      "repository_path": "analysis/reference/key_routing/ram_boundary_literals.tsv",
+      "sha256": "7d9fff28b61a6c115ce6c34b73f890ae641f00ed9ee4832089524131f67737e3",
+      "bytes": 45359,
+      "already_present": true
+    },
+    {
+      "legacy_path": "key_routing/scan_integration.asm",
+      "repository_path": "analysis/reference/key_routing/scan_integration.asm",
+      "sha256": "c8218c0a64f58df2e5ce72600e59200bf227bff448bdad2a140a4bf4e3d31034",
+      "bytes": 198417,
+      "already_present": true
+    },
+    {
+      "legacy_path": "key_routing/scan_integration.c",
+      "repository_path": "analysis/reference/key_routing/scan_integration.c",
+      "sha256": "bf3fdc27d32e982df30407867159109b738b626a19eb0133f1347725108da99a",
+      "bytes": 59283,
+      "already_present": true
+    },
+    {
+      "legacy_path": "menu_flow/menu_control.c",
+      "repository_path": "analysis/reference/menu_flow/menu_control.c",
+      "sha256": "1e7d5316005ef3996a2ee267794c71a602549c5fb673e041a1e281bef4224a8e",
+      "bytes": 47986,
+      "already_present": true
+    },
+    {
+      "legacy_path": "menu_flow/recovered_switches.tsv",
+      "repository_path": "analysis/reference/menu_flow/recovered_switches.tsv",
+      "sha256": "97b3f4d623fff7231ed2147454e763bab96171933a07ab3adccf44e61d8721e3",
+      "bytes": 4872,
+      "already_present": true
+    },
+    {
+      "legacy_path": "ram_boundary_literals.tsv",
+      "repository_path": "analysis/reference/key_routing/ram_boundary_literals.tsv",
+      "sha256": "7d9fff28b61a6c115ce6c34b73f890ae641f00ed9ee4832089524131f67737e3",
+      "bytes": 45359,
+      "already_present": true
+    },
+    {
+      "legacy_path": "scan_integration.asm",
+      "repository_path": "analysis/reference/integration_review/scan_integration.asm",
+      "sha256": "26baa35a6010a6aea43e5ff6f66ad8af5ab857d4a42f5c60342607df08907fdb",
+      "bytes": 154003,
+      "already_present": false
+    },
+    {
+      "legacy_path": "scan_integration.c",
+      "repository_path": "analysis/reference/integration_review/scan_integration.c",
+      "sha256": "5ec1da39594064fa7c19c43fc5ef2f198bd3b556fa903187d7c1b37ac739b55f",
+      "bytes": 36416,
+      "already_present": false
+    },
+    {
+      "legacy_path": "scan_start_frame.tsv",
+      "repository_path": "analysis/reference/integration_review/scan_start_frame.tsv",
+      "sha256": "a9a6a372b7e79e36397e222c8e5bd09e620fc39035010731e861431138655d8d",
+      "bytes": 394,
+      "already_present": false
+    },
+    {
+      "legacy_path": "zone_ui/integration_callers.tsv",
+      "repository_path": "analysis/reference/integration_review/zone_ui/integration_callers.tsv",
+      "sha256": "5573a5e47214275429af79f6a90c2e290d561f1e64eab8a4242fc583fc653820",
+      "bytes": 5526,
+      "already_present": false
+    },
+    {
+      "legacy_path": "zone_ui/ram_boundary_literals.tsv",
+      "repository_path": "analysis/reference/key_routing/ram_boundary_literals.tsv",
+      "sha256": "7d9fff28b61a6c115ce6c34b73f890ae641f00ed9ee4832089524131f67737e3",
+      "bytes": 45359,
+      "already_present": true
+    },
+    {
+      "legacy_path": "zone_ui/scan_integration.asm",
+      "repository_path": "analysis/reference/integration_review/zone_ui/scan_integration.asm",
+      "sha256": "ebe4127faa5739e2ac16a695e8f62f446b904f3c5e7eaf5a763a02a9d4847e95",
+      "bytes": 185672,
+      "already_present": false
+    },
+    {
+      "legacy_path": "zone_ui/scan_integration.c",
+      "repository_path": "analysis/reference/integration_review/zone_ui/scan_integration.c",
+      "sha256": "57ae572ce8c033f0218e241a05fa72bf6dcd9b4240f60d05c3ca81cbea1897e6",
+      "bytes": 52055,
+      "already_present": false
+    }
+  ]
+}

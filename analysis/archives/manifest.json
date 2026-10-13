@@ -1,0 +1,19 @@
+{
+  "confidence": "code-verified",
+  "ghidra_version": "12.1.4 PUBLIC",
+  "source_project": "work/ghidra-project/DM32_NRF_049_correct_base",
+  "program": "DM32.NRF.01.049.payload.bin",
+  "archive": "DM32_NRF_049_correct_base.gzf",
+  "archive_bytes": 4643413,
+  "archive_sha256": "354f93246db227e298d7161a370348b034cbd80f9d1507198a77987015bf9d2d",
+  "payload_sha256": "3711be95c10975c8f33073ad7a0b3c4d815e301bbcd389a4bd7ff7a0114acc63",
+  "functions": 2171,
+  "user_defined_function_names": 1,
+  "data_types_including_builtins": 7,
+  "listing_comment_records": 0,
+  "export_read_only": true,
+  "analysis_rerun": false,
+  "reimport_inventory_equal": true,
+  "inventory_sha256": "f13b46227ea17d42e4a12edd0ba69b864cc547ea4ee8f34cea77bfb528bc9b5c",
+  "scope": "Inventory verifies memory block bytes, functions/bodies/signatures, user symbols, comment records and type count; not every database field. GZF preserves the stored program database."
+}

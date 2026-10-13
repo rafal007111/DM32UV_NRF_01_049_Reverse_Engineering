@@ -11,3 +11,7 @@ build/
 *.map
 __pycache__/
 !analysis/inputs/DM32_NRF_049_20251017.bin
+!analysis/inputs/stock_progmem_1MiB.bin
+!analysis/inputs/current_scan_tick_fix.progmem.bin
+*.gzf
+!analysis/archives/DM32_NRF_049_correct_base.gzf

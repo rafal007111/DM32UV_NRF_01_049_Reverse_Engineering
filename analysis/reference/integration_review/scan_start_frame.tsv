@@ -1,0 +1,8 @@
+temporary_probe	instruction	stock_match
+030e13ec	push r4,r5,r6,lr	identical to stock
+030e13ee	subi sp,sp,0x34	identical to stock
+030e13f0	mov r4,r0	identical to stock
+030e13f2	lrw r3,0x30e13f8	not applicable
+030e13f4	jmp r3	not applicable
+stock_exit	addi sp,sp,0x34; pop r4,r5,r6,lr	52-byte scratch plus r4/r5/r6/lr
+continuation	0302f498	post-validation path; runtime behavior untested

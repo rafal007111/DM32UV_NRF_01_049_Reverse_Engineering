@@ -115,8 +115,9 @@ if args.profile == 'installed-reference':
     assert bytes(replay) == installed, 'Full source/module/patch replay differs from installed reference'
     report['status'] = 'REVIEW ONLY - INSTALLED REFERENCE REPLAY VERIFIED - NO IMAGE PRODUCED'
     report['replayed_image_sha256'] = hashlib.sha256(replay).hexdigest()
-    report['historical_intermediate_baseline_recovered'] = False
-    report['missing'].append('Historical 568cb4e3 baseline image and original installer provenance')
+    provenance = json.loads((root / 'image_provenance_audit.json').read_text(encoding='utf-8'))
+    report['historical_intermediate_baseline_recovered'] = provenance.get('historical_chain_complete', False)
+    report['missing'].append('Independent verification of historical build/installer provenance')
 if not picker_included: report['missing'].insert(0,'Scan Zone picker event routing/native build')
 if not scan_included: report['missing'].insert(0,'Scan Zone start/iteration/stop integration')
 filename = 'installed_reference_patch_plan.json' if args.profile == 'installed-reference' else 'integration_patch_plan.json'

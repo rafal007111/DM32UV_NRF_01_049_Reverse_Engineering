@@ -1,0 +1,155 @@
+{
+  "status": "candidate guards only; no hooks applied; native picker build pending",
+  "firmware_sha256": "aff6b4dc09dcce45847173defba26e94157cc628af86826e21e5af227bdc52dd",
+  "sites": [
+    {
+      "va": "0x303f9c0",
+      "raw_offset": 211648,
+      "before": "fe e3 5c 9b",
+      "original_target": "0x3013078",
+      "replacement_symbol": "dm32_picker_key_read_bridge",
+      "role": "single main-UI key dequeue; closed picker forwards key"
+    },
+    {
+      "va": "0x303a774",
+      "raw_offset": 190580,
+      "before": "00 e0 84 94",
+      "original_target": "0x304d07c",
+      "replacement_symbol": "dm32_picker_entry_bridge",
+      "role": "Scan confirmation; new row 9 opens independent picker"
+    },
+    {
+      "va": "0x303a8f0",
+      "raw_offset": 190960,
+      "before": "00 e0 c6 93",
+      "original_target": "0x304d07c",
+      "replacement_symbol": "dm32_picker_entry_bridge",
+      "role": "Scan confirmation; new row 9 opens independent picker"
+    },
+    {
+      "va": "0x303c904",
+      "raw_offset": 199172,
+      "before": "ff e3 d4 f6",
+      "original_target": "0x303b6ac",
+      "replacement_symbol": "dm32_picker_render_bridge",
+      "role": "candidate direct UI redraw call; retain stock renderer when picker closed"
+    },
+    {
+      "va": "0x303c984",
+      "raw_offset": 199300,
+      "before": "ff e3 94 f6",
+      "original_target": "0x303b6ac",
+      "replacement_symbol": "dm32_picker_render_bridge",
+      "role": "candidate direct UI redraw call; retain stock renderer when picker closed"
+    },
+    {
+      "va": "0x303c9fa",
+      "raw_offset": 199418,
+      "before": "ff e3 59 f6",
+      "original_target": "0x303b6ac",
+      "replacement_symbol": "dm32_picker_render_bridge",
+      "role": "candidate direct UI redraw call; retain stock renderer when picker closed"
+    },
+    {
+      "va": "0x303ca2c",
+      "raw_offset": 199468,
+      "before": "ff e3 40 f6",
+      "original_target": "0x303b6ac",
+      "replacement_symbol": "dm32_picker_render_bridge",
+      "role": "candidate direct UI redraw call; retain stock renderer when picker closed"
+    },
+    {
+      "va": "0x303ca4c",
+      "raw_offset": 199500,
+      "before": "ff e3 30 f6",
+      "original_target": "0x303b6ac",
+      "replacement_symbol": "dm32_picker_render_bridge",
+      "role": "candidate direct UI redraw call; retain stock renderer when picker closed"
+    },
+    {
+      "va": "0x303caac",
+      "raw_offset": 199596,
+      "before": "ff e3 00 f6",
+      "original_target": "0x303b6ac",
+      "replacement_symbol": "dm32_picker_render_bridge",
+      "role": "candidate direct UI redraw call; retain stock renderer when picker closed"
+    },
+    {
+      "va": "0x303cafe",
+      "raw_offset": 199678,
+      "before": "ff e3 d7 f5",
+      "original_target": "0x303b6ac",
+      "replacement_symbol": "dm32_picker_render_bridge",
+      "role": "candidate direct UI redraw call; retain stock renderer when picker closed"
+    },
+    {
+      "va": "0x303cb72",
+      "raw_offset": 199794,
+      "before": "ff e3 9d f5",
+      "original_target": "0x303b6ac",
+      "replacement_symbol": "dm32_picker_render_bridge",
+      "role": "candidate direct UI redraw call; retain stock renderer when picker closed"
+    },
+    {
+      "va": "0x303cda0",
+      "raw_offset": 200352,
+      "before": "ff e3 86 f4",
+      "original_target": "0x303b6ac",
+      "replacement_symbol": "dm32_picker_render_bridge",
+      "role": "candidate direct UI redraw call; retain stock renderer when picker closed"
+    },
+    {
+      "va": "0x303d82a",
+      "raw_offset": 203050,
+      "before": "ff e3 41 ef",
+      "original_target": "0x303b6ac",
+      "replacement_symbol": "dm32_picker_render_bridge",
+      "role": "candidate direct UI redraw call; retain stock renderer when picker closed"
+    },
+    {
+      "va": "0x303dd30",
+      "raw_offset": 204336,
+      "before": "ff e3 be ec",
+      "original_target": "0x303b6ac",
+      "replacement_symbol": "dm32_picker_render_bridge",
+      "role": "candidate direct UI redraw call; retain stock renderer when picker closed"
+    },
+    {
+      "va": "0x303de8e",
+      "raw_offset": 204686,
+      "before": "ff e3 0f ec",
+      "original_target": "0x303b6ac",
+      "replacement_symbol": "dm32_picker_render_bridge",
+      "role": "candidate direct UI redraw call; retain stock renderer when picker closed"
+    },
+    {
+      "va": "0x305c92c",
+      "raw_offset": 330284,
+      "before": "fe e3 c0 f6",
+      "original_target": "0x303b6ac",
+      "replacement_symbol": "dm32_picker_render_bridge",
+      "role": "candidate direct UI redraw call; retain stock renderer when picker closed"
+    }
+  ],
+  "stock_key_byte": "0x00038fdd",
+  "ui_scene": "0x000320c8",
+  "selection_indices": "0x0003e508",
+  "saved_scan_map": "0x0003e682",
+  "ui_mutex": "0x0003e4e0",
+  "handled_keys": {
+    "1": "up",
+    "2": "down",
+    "5": "confirm",
+    "6": "back",
+    "254": "redraw"
+  },
+  "suppressed_return": 255,
+  "stock_ptt_event_forwarded": 19,
+  "remaining": [
+    "C-SKY build and ABI review",
+    "validate live UI scene/widget restoration on radio",
+    "Scan Zone start/iteration/stop integration",
+    "CC/TS receive hooks",
+    "persistent settings"
+  ]
+}

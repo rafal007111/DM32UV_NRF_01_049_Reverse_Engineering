@@ -8,3 +8,9 @@
 *.csv text eol=crlf
 *.bin -text
 *.asm -text
+
+# Preserve byte-for-byte recovered evidence and its manifest hashes.
+analysis/reference/integration_review/** -text whitespace=-blank-at-eol,-blank-at-eof
+analysis/reference/legacy_audits/** -text whitespace=-blank-at-eol,-blank-at-eof
+analysis/archives/*.tsv -text
+*.gzf binary

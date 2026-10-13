@@ -1,0 +1,325 @@
+{
+  "status": "candidate guards only; scanner draft is not installed",
+  "firmware_sha256": "aff6b4dc09dcce45847173defba26e94157cc628af86826e21e5af227bdc52dd",
+  "sites": [
+    {
+      "region": "flash text",
+      "va": "0x3016f1e",
+      "raw_offset": 45086,
+      "before": "00 e0 7d c2",
+      "original_target": "0x302f418",
+      "replacement_symbol": "dm32_scan_start_bridge",
+      "status": "candidate; native build and instruction-context review pending"
+    },
+    {
+      "region": "flash text",
+      "va": "0x3017468",
+      "raw_offset": 46440,
+      "before": "00 e0 1c bc",
+      "original_target": "0x302eca0",
+      "replacement_symbol": "dm32_scan_mode_bridge",
+      "status": "candidate; native build and instruction-context review pending"
+    },
+    {
+      "region": "flash text",
+      "va": "0x301ccd2",
+      "raw_offset": 69074,
+      "before": "00 e0 e7 8f",
+      "original_target": "0x302eca0",
+      "replacement_symbol": "dm32_scan_mode_bridge",
+      "status": "candidate; native build and instruction-context review pending"
+    },
+    {
+      "region": "flash text",
+      "va": "0x302edea",
+      "raw_offset": 143082,
+      "before": "ff e3 5b ff",
+      "original_target": "0x302eca0",
+      "replacement_symbol": "dm32_scan_mode_bridge",
+      "status": "candidate; native build and instruction-context review pending"
+    },
+    {
+      "region": "flash text",
+      "va": "0x302ee20",
+      "raw_offset": 143136,
+      "before": "ff e3 40 ff",
+      "original_target": "0x302eca0",
+      "replacement_symbol": "dm32_scan_mode_bridge",
+      "status": "candidate; native build and instruction-context review pending"
+    },
+    {
+      "region": "flash text",
+      "va": "0x302eed4",
+      "raw_offset": 143316,
+      "before": "ff e3 e6 fe",
+      "original_target": "0x302eca0",
+      "replacement_symbol": "dm32_scan_mode_bridge",
+      "status": "candidate; native build and instruction-context review pending"
+    },
+    {
+      "region": "flash text",
+      "va": "0x302ef16",
+      "raw_offset": 143382,
+      "before": "ff e3 c5 fe",
+      "original_target": "0x302eca0",
+      "replacement_symbol": "dm32_scan_mode_bridge",
+      "status": "candidate; native build and instruction-context review pending"
+    },
+    {
+      "region": "flash text",
+      "va": "0x302ef4e",
+      "raw_offset": 143438,
+      "before": "ff e3 a9 fe",
+      "original_target": "0x302eca0",
+      "replacement_symbol": "dm32_scan_mode_bridge",
+      "status": "candidate; native build and instruction-context review pending"
+    },
+    {
+      "region": "flash text",
+      "va": "0x302f03a",
+      "raw_offset": 143674,
+      "before": "ff e3 57 fe",
+      "original_target": "0x302ece8",
+      "replacement_symbol": "dm32_scan_step_bridge",
+      "status": "candidate; native build and instruction-context review pending"
+    },
+    {
+      "region": "flash text",
+      "va": "0x302f0ca",
+      "raw_offset": 143818,
+      "before": "ff e3 0f fe",
+      "original_target": "0x302ece8",
+      "replacement_symbol": "dm32_scan_step_bridge",
+      "status": "candidate; native build and instruction-context review pending"
+    },
+    {
+      "region": "flash text",
+      "va": "0x302f156",
+      "raw_offset": 143958,
+      "before": "ff e3 a5 fd",
+      "original_target": "0x302eca0",
+      "replacement_symbol": "dm32_scan_mode_bridge",
+      "status": "candidate; native build and instruction-context review pending"
+    },
+    {
+      "region": "flash text",
+      "va": "0x302f17c",
+      "raw_offset": 143996,
+      "before": "ff e3 92 fd",
+      "original_target": "0x302eca0",
+      "replacement_symbol": "dm32_scan_mode_bridge",
+      "status": "candidate; native build and instruction-context review pending"
+    },
+    {
+      "region": "flash text",
+      "va": "0x302f218",
+      "raw_offset": 144152,
+      "before": "ff e3 44 fd",
+      "original_target": "0x302eca0",
+      "replacement_symbol": "dm32_scan_mode_bridge",
+      "status": "candidate; native build and instruction-context review pending"
+    },
+    {
+      "region": "flash text",
+      "va": "0x302f262",
+      "raw_offset": 144226,
+      "before": "ff e3 1f fd",
+      "original_target": "0x302eca0",
+      "replacement_symbol": "dm32_scan_mode_bridge",
+      "status": "candidate; native build and instruction-context review pending"
+    },
+    {
+      "region": "flash text",
+      "va": "0x302f2c0",
+      "raw_offset": 144320,
+      "before": "ff e3 f0 fc",
+      "original_target": "0x302eca0",
+      "replacement_symbol": "dm32_scan_mode_bridge",
+      "status": "candidate; native build and instruction-context review pending"
+    },
+    {
+      "region": "flash text",
+      "va": "0x302f2f2",
+      "raw_offset": 144370,
+      "before": "ff e3 d7 fc",
+      "original_target": "0x302eca0",
+      "replacement_symbol": "dm32_scan_mode_bridge",
+      "status": "candidate; native build and instruction-context review pending"
+    },
+    {
+      "region": "flash text",
+      "va": "0x302f350",
+      "raw_offset": 144464,
+      "before": "ff e3 a8 fc",
+      "original_target": "0x302eca0",
+      "replacement_symbol": "dm32_scan_mode_bridge",
+      "status": "candidate; native build and instruction-context review pending"
+    },
+    {
+      "region": "flash text",
+      "va": "0x302f374",
+      "raw_offset": 144500,
+      "before": "ff e3 96 fc",
+      "original_target": "0x302eca0",
+      "replacement_symbol": "dm32_scan_mode_bridge",
+      "status": "candidate; native build and instruction-context review pending"
+    },
+    {
+      "region": "flash text",
+      "va": "0x302f3a6",
+      "raw_offset": 144550,
+      "before": "ff e3 7d fc",
+      "original_target": "0x302eca0",
+      "replacement_symbol": "dm32_scan_mode_bridge",
+      "status": "candidate; native build and instruction-context review pending"
+    },
+    {
+      "region": "flash text",
+      "va": "0x302f438",
+      "raw_offset": 144696,
+      "before": "ff e3 34 fc",
+      "original_target": "0x302eca0",
+      "replacement_symbol": "dm32_scan_mode_bridge",
+      "status": "candidate; native build and instruction-context review pending"
+    },
+    {
+      "region": "flash text",
+      "va": "0x302f542",
+      "raw_offset": 144962,
+      "before": "ff e3 af fb",
+      "original_target": "0x302eca0",
+      "replacement_symbol": "dm32_scan_mode_bridge",
+      "status": "candidate; native build and instruction-context review pending"
+    },
+    {
+      "region": "flash text",
+      "va": "0x30321d2",
+      "raw_offset": 156370,
+      "before": "ff e3 23 e9",
+      "original_target": "0x302f418",
+      "replacement_symbol": "dm32_scan_start_bridge",
+      "status": "candidate; native build and instruction-context review pending"
+    },
+    {
+      "region": "flash text",
+      "va": "0x303b606",
+      "raw_offset": 194310,
+      "before": "ff e3 4d 9b",
+      "original_target": "0x302eca0",
+      "replacement_symbol": "dm32_scan_mode_bridge",
+      "status": "candidate; native build and instruction-context review pending"
+    },
+    {
+      "region": "flash text",
+      "va": "0x304c15e",
+      "raw_offset": 262750,
+      "before": "ff e3 1f 1a",
+      "original_target": "0x302f59c",
+      "replacement_symbol": "dm32_scan_list_choice_bridge",
+      "status": "candidate; native build and instruction-context review pending"
+    },
+    {
+      "region": "flash text",
+      "va": "0x304d0a6",
+      "raw_offset": 266662,
+      "before": "ff e3 b9 11",
+      "original_target": "0x302f418",
+      "replacement_symbol": "dm32_scan_start_bridge",
+      "status": "candidate; native build and instruction-context review pending"
+    },
+    {
+      "region": "flash text",
+      "va": "0x304d16a",
+      "raw_offset": 266858,
+      "before": "ff e3 9b 0d",
+      "original_target": "0x302eca0",
+      "replacement_symbol": "dm32_scan_mode_bridge",
+      "status": "candidate; native build and instruction-context review pending"
+    },
+    {
+      "region": "flash text",
+      "va": "0x304d5ca",
+      "raw_offset": 267978,
+      "before": "ff e3 6b 0b",
+      "original_target": "0x302eca0",
+      "replacement_symbol": "dm32_scan_mode_bridge",
+      "status": "candidate; native build and instruction-context review pending"
+    },
+    {
+      "region": "flash text",
+      "va": "0x304d9b4",
+      "raw_offset": 268980,
+      "before": "ff e3 76 09",
+      "original_target": "0x302eca0",
+      "replacement_symbol": "dm32_scan_mode_bridge",
+      "status": "candidate; native build and instruction-context review pending"
+    },
+    {
+      "region": "flash text",
+      "va": "0x3057ce2",
+      "raw_offset": 310754,
+      "before": "fe e3 df b7",
+      "original_target": "0x302eca0",
+      "replacement_symbol": "dm32_scan_mode_bridge",
+      "status": "candidate; native build and instruction-context review pending"
+    },
+    {
+      "region": "flash text",
+      "va": "0x3058628",
+      "raw_offset": 313128,
+      "before": "fe e3 f8 b6",
+      "original_target": "0x302f418",
+      "replacement_symbol": "dm32_scan_start_bridge",
+      "status": "candidate; native build and instruction-context review pending"
+    },
+    {
+      "region": "flash text",
+      "va": "0x305c43e",
+      "raw_offset": 329022,
+      "before": "fe e3 31 94",
+      "original_target": "0x302eca0",
+      "replacement_symbol": "dm32_scan_mode_bridge",
+      "status": "candidate; native build and instruction-context review pending"
+    },
+    {
+      "region": "flash text",
+      "va": "0x305cca8",
+      "raw_offset": 331176,
+      "before": "fe e3 fc 8f",
+      "original_target": "0x302eca0",
+      "replacement_symbol": "dm32_scan_mode_bridge",
+      "status": "candidate; native build and instruction-context review pending"
+    },
+    {
+      "region": "flash text",
+      "va": "0x305e00a",
+      "raw_offset": 336138,
+      "before": "fe e3 4b 86",
+      "original_target": "0x302eca0",
+      "replacement_symbol": "dm32_scan_mode_bridge",
+      "status": "candidate; native build and instruction-context review pending"
+    },
+    {
+      "region": "flash text",
+      "va": "0x3060860",
+      "raw_offset": 346464,
+      "before": "fe e3 20 72",
+      "original_target": "0x302eca0",
+      "replacement_symbol": "dm32_scan_mode_bridge",
+      "status": "candidate; native build and instruction-context review pending"
+    }
+  ],
+  "source_integration_requires": [
+    "scan_prepare.c",
+    "scan_start_bridge.c",
+    "scan_step_bridge.c",
+    "scan_start_tail.S"
+  ],
+  "stock_state_bytes": 96,
+  "virtual_list_slots": 2,
+  "zone_iterator_channels_max": 64,
+  "stock_post_validation_entry": "0x0302f498",
+  "stock_frame_scratch_bytes": 52,
+  "frame_review": "integration_review/scan_start_frame.tsv",
+  "on_device_tested": false
+}

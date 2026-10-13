@@ -1,0 +1,99 @@
+{
+  "status": "candidate tables only; menu filtering, handlers and persistence not hooked",
+  "index_convention": "zero based physical IDs",
+  "scan_zone_id": 9,
+  "ts_match_id": 22,
+  "cc_match_id": 23,
+  "stock_tables": [
+    {
+      "count": 9,
+      "pointers": [
+        "0x030bd5a0",
+        "0x030bd5ac",
+        "0x030bd5b8",
+        "0x030bd5cc",
+        "0x030bd5e0",
+        "0x030bd5ec",
+        "0x030bd5fc",
+        "0x030bd60c",
+        "0x030bd61c"
+      ],
+      "name": "scan_cn",
+      "va": "0x030b9060"
+    },
+    {
+      "count": 9,
+      "pointers": [
+        "0x030bd62c",
+        "0x030bd638",
+        "0x030bd644",
+        "0x030bd658",
+        "0x030bd66c",
+        "0x030bd67c",
+        "0x030bd688",
+        "0x030bd694",
+        "0x030bd6a0"
+      ],
+      "name": "scan_en",
+      "va": "0x030b9084"
+    },
+    {
+      "count": 22,
+      "pointers": [
+        "0x030bdfac",
+        "0x030bdfb8",
+        "0x030bdfc4",
+        "0x030bdfd4",
+        "0x030bdfe0",
+        "0x030bdfec",
+        "0x030bdff4",
+        "0x030be000",
+        "0x030be00c",
+        "0x030be018",
+        "0x030be024",
+        "0x030be030",
+        "0x030be03c",
+        "0x030be044",
+        "0x030be050",
+        "0x030be05c",
+        "0x030be068",
+        "0x030be074",
+        "0x030be084",
+        "0x030be090",
+        "0x030be09c",
+        "0x030bd1b0"
+      ],
+      "name": "other_cn",
+      "va": "0x030b9650"
+    },
+    {
+      "count": 22,
+      "pointers": [
+        "0x030be0a8",
+        "0x030be0b8",
+        "0x030be0c4",
+        "0x030be0d0",
+        "0x030be0d4",
+        "0x030be0e0",
+        "0x030be0ec",
+        "0x030be0fc",
+        "0x030be10c",
+        "0x030be118",
+        "0x030be124",
+        "0x030bd1d0",
+        "0x030be130",
+        "0x030be13c",
+        "0x030be14c",
+        "0x030be15c",
+        "0x030be168",
+        "0x030be170",
+        "0x030be180",
+        "0x030be18c",
+        "0x030be198",
+        "0x030be1a4"
+      ],
+      "name": "other_en",
+      "va": "0x030b96a8"
+    }
+  ]
+}

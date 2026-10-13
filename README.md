@@ -24,3 +24,7 @@ This is a private analysis repository containing vendor-derived material. Do not
 ### Offline reproducibility repair (2026-10-13)
 
 See [docs/REPRODUCIBILITY.md](docs/REPRODUCIBILITY.md) for the host test runner, recovered menu/hook audits, and the installed-reference patch plan. The rebuilt 4458-byte module matches the installed image exactly; 58 guarded patches replay stock to the full installed SHA-256 in memory without producing an image file. The historical intermediate baseline and original installer remain unavailable. All 11 host tests passed with MSVC; no new hardware validation was performed.
+
+### Legacy recovery follow-up (2026-10-13)
+
+The actual 2171-function Ghidra database is now available as `analysis/archives/DM32_NRF_049_correct_base.gzf`; stock and installed program images are versioned with owner authorization. The exact 568cb4e3 intermediate was found in the legacy Documents/Codex workspace, and both historical byte deltas are verified. This supersedes earlier missing-baseline statements; full historical build/installer provenance remains unreviewed. See [LEGACY_RECOVERY.md](docs/LEGACY_RECOVERY.md).
