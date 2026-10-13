@@ -1,10 +1,10 @@
 {
-  "note": "Private local research inputs. Do not publish or commit.",
+  "note": "Private research inputs. The official updater container is versioned at the owner's request; the other binary inputs remain local and ignored. Do not publish publicly.",
   "files": {
     "DM32_NRF_049_20251017.bin": {
       "bytes": 873964,
       "sha256": "aff6b4dc09dcce45847173defba26e94157cc628af86826e21e5af227bdc52dd",
-      "git_ignored": true
+      "git_ignored": false
     },
     "DM32.NRF.01.049.payload.bin": {
       "bytes": 873708,

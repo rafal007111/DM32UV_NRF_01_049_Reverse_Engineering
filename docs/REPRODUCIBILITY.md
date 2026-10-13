@@ -46,8 +46,10 @@ python firmware/audit_staging.py firmware/build/scan_candidate
 python firmware/plan_integration.py firmware/build/scan_candidate --profile installed-reference
 ```
 
-Place the four private inputs listed in `analysis/inputs/manifest.json` in that
-directory. They remain ignored. The audit uses the repo-relative payload path
+The official updater `analysis/inputs/DM32_NRF_049_20251017.bin` is versioned
+in this private repository at the owner's request. Supply the other three inputs
+listed in `analysis/inputs/manifest.json` locally; they remain ignored.
+The audit uses the repo-relative payload path
 and checks its exact hash. The three recovered `firmware/*_audit.json` files for
 menu tables and routing are versionable evidence and require no external work
 directory. Run audits without Python `-O`; the existing assertion-based guards

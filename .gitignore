@@ -10,3 +10,4 @@ build/
 *.raw
 *.map
 __pycache__/
+!analysis/inputs/DM32_NRF_049_20251017.bin
