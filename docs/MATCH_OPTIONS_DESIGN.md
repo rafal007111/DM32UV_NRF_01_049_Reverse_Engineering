@@ -34,7 +34,7 @@ Bytes are in image order (little-endian halfwords; 32-bit instructions are store
 |---|---|---|---|
 | `03028180` terminator | `0302819C` | `73 13 78 83 63 e4 08 20 cc 74 03 e9` | replace `ld.b`+`andi` (6 bytes at `0302819E`) by `bsr cc_bypass` + `nop`, result in `r3` |
 | `030282A4` voice LC header | `030282D0` | `66 11 78 83 63 e4 08 20 cc 74 03 e9` | same at `030282D2` |
-| `03028644` data-sync dispatcher | `03028B5E` | `72 10 78 83 63 e4 08 20 cc 74 03 e9` | same at `03028B60` (data handlers re-check CC themselves, so data stays CC-gated) |
+| `03028644` data-sync dispatcher | `03028B5E` | `72 10 78 83 63 e4 08 20 cc 74 03 e9` | same at `03028B60` — but limited to data types 1/2: Idle (type 9) has no CC check of its own (correction in §3.9) |
 | `03028BE4` embedded LC / late entry | `03028CE8` | `08 0c 59 10 58 82 42 e4 08 20 88 74 02 e9` | same pattern on `r2` at `03028CEC`; here `r3` still holds the status word (used at `03028CF8`) and must be preserved |
 | `03028644` embedded-CC mismatch counter | `030289E2` | `6d 10 65 83 4e 65 2c 0c` (`lrw; ld.b r3,(r3,5); cmpne r3,r5; bf reset`) | when CC off, take the reset path (else long foreign-CC calls without sync get cut after 7 bursts) |
 
@@ -126,7 +126,8 @@ Policy = channel record byte `+0x0A` bits 6:4, loaded by the channel load `03057
 Consequences: in modes 0 and 4 the admit test uses the RF carrier and the last received CC, not slot state, so
 TS Match off does not change it (a carrier is present either way). In mode 1 only `3BEAB` and `3BA55` would be
 touched by an other-slot capture (§3.5). CC Match off does not change `3C61A` handling (the dispatcher stores
-the received CC before any gate in stock firmware), so policy 2 keeps its stock meaning.
+the received CC before any gate in stock firmware), so policy 2 keeps its stock meaning. *Corrected in §3.9: with
+`cc_opt = 1` foreign frames reach the dispatcher and do change `3C61A` and `3BEAB`.*
 
 ### 3.7 Hardware CC layer (correction 2026-10-14, fifth pass)
 
@@ -258,6 +259,90 @@ with §3.1 (inferred), within the 1686-byte window of §4.
 | A-slot Idle during B traffic | SDR (dsd-fme) on a busy repeater: watch both slots while only B carries a call | Repeater sends Idle bursts on A while B is active (confirms why the B-Idle rule is needed) |
 | Talk-back | Stock radio: receive a group call that is not the channel contact, press PTT within the hang time | Radio transmits to the received group (confirms §3.8.1 talk-back reading) |
 | Scan stop | Stock radio scanning a list containing the repeater, traffic only on the other slot | Scan does not stop (stock); with TS off it would stop |
+
+### 3.9 CC Match off — completeness check and corrections (2026-10-14, fifth pass)
+
+Method: every load of the configured CC `33CCD` and of the received CC `3C61A` was listed with two independent
+trackers (`tools/dm32 acc`, and the register-tracking scan used in §3.8.4 over all catalogued functions plus the
+task entries `030206D0`, `030209E4`, `0301FF9C`, `0301FDD8`, `0305F234`, `0302B340` and IRAM `0002C458`,
+`0002D620`, `0002D770`); every `zext …, 7, 4` in flash and IRAM was attributed to its function (58 hits; only
+`03028644` and `03028BE4` apply it to the RX status word, the others extract channel-type nibbles). Absence of
+other comparisons is therefore **inferred** with that method.
+
+| Reader of `33CCD` | Compares with | Role | CC Match off |
+|---|---|---|---|
+| `03028B58` (`03028644`, data-sync gate, Monitor idiom at `03028B5E`) | status CC `r5` | gate before the data-type table | bypass **only for data types 1 and 2** (see correction below) |
+| `030282CA` (`030282A4`, idiom at `030282D0`) | `3C61A` | voice LC header | bypass |
+| `03028196` (`03028180`, idiom at `0302819C`) | `3C61A` | terminator with LC | bypass |
+| `03028CE4` (`03028BE4`, idiom at `03028CEA`) | status CC (EMB) | late entry / embedded LC | bypass |
+| `030289E4` (`03028644`) | status CC `r5` | `3C626` embedded-CC mismatch counter | bypass (take the reset path) |
+| `03027598` (`03027584`) | `3C61A` | PI header | keep (owner decision, `CC_MATCH_DESIGN.md` §4) |
+| `03024E92` (`03024E7C`), `0302548C` (`03025480`) | `3C61A` | data header / packet data | keep |
+| `03027BBA` (`03027B9C`) | `3C61A` | CSBK | keep |
+| `0302733A` (`03027334`) | `3C61A` | TX admit policy 2 | read-only subject |
+| IRAM `0002D8A6`, `0002DDF0`, `0002DE36` (`0002D7C8`) | — (copy to `11000384[3:0]`) | TX CC, mode 4 | read-only subject |
+
+Writers of `3C61A`: `03028644` (`03028B54` data sync before the gate, `03028900` embedded burst of an active call,
+`03028BE0` RC burst), `03028BE4` (`03028CDC`, before its gate), `03029318` (`0xFF` at call end). Readers besides
+the table: `03020D88` (home screen `CC:%d`). Conclusion: the four Monitor-idiom sites plus the `3C626` counter are
+the **complete voice set** (code-verified sites, completeness inferred), and the hardware `cc_opt` (§3.7) is the
+fifth required change.
+
+**Correction 1 — Idle bursts.** §3.1 assumed that "data handlers re-check CC themselves". That is true for types 0,
+3, 6, 7, 8, 10, but **not for type 9 Idle**: `030275F4` has no CC test (`DATA_PATH_ANALYSIS.md` §1), so the
+dispatcher gate is its only CC filter. Bypassing the gate for all types would let a foreign-CC Idle burst clear
+`3BEAB`, set `3BEAF`, post `0x200` (a TX-transaction waiter, `03020EC8`) and end the current call on that slot —
+which is exactly what the stock Monitor already does. At `03028B5E` the data type is live in `r0` (used at
+`03028B72`), so the cave can restrict the bypass to `r0 ∈ {1, 2}` and must preserve `r0`.
+
+**Correction 2 — TX inputs see foreign-CC traffic once `cc_opt = 1`.** `MATCH_OPTIONS_DESIGN.md` §3.6 stated that
+CC Match off does not change `3C61A` handling. That holds only for the software gate; with the hardware filter off,
+foreign-CC frames reach the dispatcher, which (code-verified):
+
+- writes the foreign CC to `3C61A` before any gate (`03028B54`, `03028CDC`), so TX admit policy 2
+  (`03027334`, "refuse if carrier and last RX CC == own CC") sees a foreign CC and **admits** PTT where stock, which
+  never saw the foreign frames, would compare against a stale own-CC value;
+- sets `3BEAB` for every admitted voice-sync burst (`03028644` voice path has no CC test) and, with the bypass, for
+  foreign LC headers/terminators/late entries, so policy 1 in mode 1 **refuses** PTT during foreign-CC traffic.
+
+Stock Monitor has both effects today. To keep TX/PTT unchanged, the dispatcher wrapper of §3.8.3 (sites T5/T6) can
+also restore `3BEAB` **and `3C61A`** after a burst whose status CC differs from `33CCD` while CC Match off is set
+and Monitor (`3BA6C` bit 3) is off. The handlers still see the true CC during the call (they read `3C61A` inside the
+wrapper), and the home screen then keeps showing the last own CC. Owner decision whether TX should instead follow the
+foreign traffic.
+
+**Embedded LC, late entry, PI and talker alias with a foreign CC (code-verified flow, consequences inferred).**
+
+- After the `03028BE4` gate the late-entry path stores the embedded LC per slot, decodes talker alias (FLCO 4–7 into
+  `3BA70`, event `0x40000000`), and for status bit 17 (EMB PI flag) copies privacy parameters to `3C685+12·slot`
+  (event `0x4000`, cleared only). With the bypass these run for foreign-CC calls as they do under Monitor.
+- PI headers keep their own CC check (`03027598`), so a foreign-CC encrypted call is not decrypted from its header.
+  The burst-F path (`030289DE` → `03027628`, `RX_INFO.rc_info` algorithm/key vs `3F720`) runs for every accepted
+  call without a CC test, so decryption can still start from the first superframe when the key matches (inferred).
+- The `3C626` counter is reset by every voice-sync burst (`03028644` voice path), so even without its bypass a
+  foreign-CC call is only cut after two consecutive lost sync bursts; the bypass removes that residual risk.
+
+**Mode 2 is unreachable.** The only writer of `33CC9` (RX mode) is `0301E580` (values 0, 1, 4; both trackers), so
+the mode-2 paths — including `030280C0`, a CSBK handler that `03028644` calls in mode 2 **before** the CC gate —
+are dormant in this build (inferred, absence of other writers). The Capacity-Plus-style handlers reachable in modes
+0/1 are the FID `0x10` voice-LC follow branch (§3.8.3, T8), the CACH short-LC handler `03027388` and CSBK opcode
+`0x3E` (`03023EB8`); all of them sit behind the CC gates except `03027388` (CACH has no CC).
+
+**Final CC site list** (stock bytes re-checked, identical in the installed image):
+
+| Id | VA | Stock bytes | Change |
+|---|---|---|---|
+| C1 | `03028B5E` | `72 10 78 83 63 e4 08 20 cc 74 03 e9 3d 00` | `ld.b`+`andi` (6 bytes at `03028B60`) → `bsr cc_bypass_dt` + `nop`; returns non-zero for Monitor, or for CC Match off with `r0 ∈ {1,2}`; clobbers only `r3` like the stock code |
+| C2 | `030282D0` | `66 11 78 83 63 e4 08 20 cc 74 03 e9` | `cc_bypass` (Monitor or CC Match off) |
+| C3 | `0302819C` | `73 13 78 83 63 e4 08 20 cc 74 03 e9` | `cc_bypass` |
+| C4 | `03028CEA` | `59 10 58 82 42 e4 08 20 88 74 02 e9` (the 14-byte row of §3.1 starts 2 bytes earlier with the preceding `bf`) | `cc_bypass` on `r2`; preserve `r3` (status word) |
+| C5 | `030289E2` | `6d 10 65 83 4e 65 2c 0c` | take the reset branch when CC Match off |
+| C6 | `0301E73C` | `6e 11 78 83 63 e4 08 20 cc 74 03 e9 07 00` | `cc_opt = 1` on channel/mode setup when CC Match off (§3.7) |
+| C7 | `0301EC40` off branch | see `MONITOR_ANALYSIS.md` §3 | keep bit 8 when CC Match off (§3.7) |
+| T5/T6 | `03023A12`, `03023A1E` | `00 e0 19 26`, `00 e0 e3 28` | shared wrapper: restore `3BEAB`/`3C61A` for foreign-CC bursts (Correction 2) |
+
+Open questions for the owner: (1) should foreign-CC traffic count as "busy" for PTT (stock Monitor behaviour) or be
+invisible to TX (wrapper)? (2) should foreign-CC Idle bursts end a call (stock Monitor) — the proposal excludes them?
 
 ## 4. Code and RAM placement (constraints found)
 

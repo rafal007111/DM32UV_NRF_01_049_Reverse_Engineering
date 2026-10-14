@@ -38,3 +38,11 @@ bits 9:8). Stock firmware enables "any CC" only for Monitor and RX mode 4 (DCDM)
 `cc_opt = 1` plus the voice-site bypasses; details and the `RF_MODE.adjustsyncmax` caveat in
 [HR_C7000_CROSSCHECK.md](HR_C7000_CROSSCHECK.md) §3.1. The completeness check of the voice CC sites is in
 [MATCH_OPTIONS_DESIGN.md](MATCH_OPTIONS_DESIGN.md) §3.7.
+
+2026-10-14 (fifth pass, completeness): all readers of `33CCD`/`3C61A` were re-listed with two trackers over flash,
+IRAM and the uncatalogued task entries; the table above is complete (inferred from that search). Two corrections
+for CC Match off, details in [MATCH_OPTIONS_DESIGN.md](MATCH_OPTIONS_DESIGN.md) §3.9: (1) the data-sync gate at
+`03028B58` is the **only** CC filter for Idle bursts (`030275F4`), so its bypass must be limited to data types 1/2;
+(2) once `cc_opt = 1`, foreign-CC frames update `3C61A` and `3BEAB` and thereby TX admission (as under stock
+Monitor) unless a wrapper restores them. Mode 2 (`33CC9 == 2`) is never set in this build, so the mode-2 CSBK path
+`030280C0`, which runs before the CC gate, is dormant (inferred).

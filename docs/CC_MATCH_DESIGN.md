@@ -61,3 +61,10 @@ loaded by `0305D8C0` into `3BD58`. In `rxcsbk` `030209E4` (code-verified via dec
 (`3BA6C` bit 1) Disable (stun), Enable and Call Alert are executed without checking the decode flags**
 (`0302154C(6)` → `0305EB8C` → `0305DFDC` for stun). Radio Check and Remote Monitor do nothing on Rx Only channels.
 Only same-CC CSBKs reach this code (§1). Not hardware-verified.
+
+## 6. Follow-up (2026-10-14, fifth pass)
+
+The datasheet confirms §1 (`HR_C7000_CROSSCHECK.md` §3.1). Completeness of the voice sites, the Idle-burst
+correction for the data-sync gate, the TX-input side effects of `cc_opt = 1` and the final guarded site list are in
+`MATCH_OPTIONS_DESIGN.md` §3.7 and §3.9. Storage: this file proposes the mod's runtime block at `4BFC0` for the
+runtime flag, `MATCH_OPTIONS_DESIGN.md` §2 proposes `3BA6D` bits 5/6; `SETTINGS_CPS_ANALYSIS.md` §9 compares both.
