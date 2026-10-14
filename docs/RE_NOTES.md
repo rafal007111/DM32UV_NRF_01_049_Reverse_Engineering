@@ -77,3 +77,7 @@ No image built. [MATCH_OPTIONS_DESIGN.md](MATCH_OPTIONS_DESIGN.md) lists the fou
 
 code-verified: task `usb` entry is `0302B340` (not `03029FB0`); `PROGRAM` runs the `02`/8×`FF`/`06` exchange and the frame loop (`0302A448`) and always restarts, `SYSINFO` opens the same frame loop without restart, `DEL-RCD` erases recording sectors and restarts ([SETTINGS_CPS_ANALYSIS.md](SETTINGS_CPS_ANALYSIS.md) §3.1). For TS Match off, `rxvoice` indexes the call descriptor and PI header by the TX slot `3BEAA` at `03020714`/`030207AA`/`030208FA`, and the `03028644` slot gate precedes the data-type table, so a bypass must be limited to voice bursts; `3BEBD..3BECB` appears unreferenced (inferred) ([MATCH_OPTIONS_DESIGN.md](MATCH_OPTIONS_DESIGN.md) §3.3–3.4).
 
+### Channel record and TX admit inputs (2026-10-14, fourth pass)
+
+code-verified from the channel loader `03057790`: channel record bytes `+0x08` (type, Rx Only), `+0x0A` (TX admit policy bits 6:4, talkaround/simplex bits), `+0x0B` (emergency alarm accept/ACK/system index), `+0x0C`/`+0x10` (privacy key), `+0x0D` (CC/TS/Double Slot), `+0x16`, `+0x1B`; AM-window channels are forced to analog Rx Only. TX admit uses the RF carrier and last RX CC in modes 0/4 and slot state only in mode 1, so TS Match off could affect PTT only on repeater channels. See [SETTINGS_CPS_ANALYSIS.md](SETTINGS_CPS_ANALYSIS.md) §3.2 and [MATCH_OPTIONS_DESIGN.md](MATCH_OPTIONS_DESIGN.md) §3.6.
+

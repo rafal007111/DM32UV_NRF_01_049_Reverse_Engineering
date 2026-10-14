@@ -154,6 +154,34 @@ So a CPS **write** session is `PROGRAM` (… frames …) and always ends in a re
 read/write frame access without restarting. `DEL-RCD` and `PROGRAM` are the only words that erase or rewrite
 flash besides the `S`/`C` frames. Read-only documentation; never send these from an agent.
 
+### 3.2 Channel record (0x30 bytes in data flash, RAM copy `3E1F8`, 0x33 bytes) — loader `03057790`
+
+Record location: `03055CCC` (`RX_CALL_PATH_ANALYSIS.md` §6). The loader reads 0x20 bytes, converts the two
+frequencies with `0305F904(…, 4)` (BCD, inferred) and copies bytes `+0x08..+0x1F` unchanged. Bit uses below are
+code-verified in `03057790`, `03056330`, `0305DA8C` and the menu writers; names are inferred unless a menu string
+confirms them.
+
+| Byte | Bits | Use |
+|---|---|---|
+| `+0x00..+0x03` | | RX frequency (10 Hz units after conversion) |
+| `+0x04..+0x07` | | TX frequency; forced to RX when `+0x0A` bit 3 is set or the radio state `3E335 == 0x10` (talkaround), unless `+0x0A` bit 7 |
+| `+0x08` | 7:4 | channel type: 0 analog, 1 digital, 2/3 mixed types (setting `'D'`, menu `Channel Type`) |
+| `+0x08` | 3 | Rx Only (`0301EC1C` → `3BA6C` bit 1); forced on, with type 0, for frequencies in the AM window |
+| `+0x08` | 2:1 | forced to `2` when the channel is loaded with mode argument 4 (unreviewed) |
+| `+0x0A` | 7 | set by the loader when RX == TX (simplex) |
+| `+0x0A` | 6:4 | **TX admit policy** → `33CD0` (`MATCH_OPTIONS_DESIGN.md` §3.6) |
+| `+0x0A` | 3 | talkaround (TX := RX), inferred |
+| `+0x0B` | 7 | emergency alarm (`0x27`) accept → `3BA6C` bit 5; bit 6 ACK → `3BA6C` bit 6 (cleared when bit 7 is 0); bits 4:0 emergency system index 1–15 (`0305DA8C`) |
+| `+0x0C` | 3:2 | value 1 with digital type 1/3 enables privacy TX (`4009C` bit 0) using key slot `+0x10` (0–7) from block 4 `(slot+400)·2` (`Digit Encrypt`, inferred) |
+| `+0x0D` | 3:0 | Colour Code (`0301E7BC`) |
+| `+0x0D` | 4 / 5 | Time Slot / Double Slot (`RX_CALL_PATH_ANALYSIS.md` §6) |
+| `+0x0F` | 5:0 | passed to `030562C4` (unreviewed) |
+| `+0x16` | 6:4 | analog RX squelch/tone type (`03060A74`) |
+| `+0x1B` | | DMR ID list index → own ID (`03057654`, `0301E798`) |
+
+None of the bits proposed for TS/CC Match live in the channel record; a per-channel option would need an unused
+bit here **and** CPS support, which is why `MATCH_OPTIONS_DESIGN.md` proposes global settings instead.
+
 ## 4. RF transceiver identity (strong inference)
 
 `0002C2F8(reg, val16)` / `0002C340(reg)` drive a 3-wire bus (GPIO `7`, `0x18`; read sets `reg | 0x80`).

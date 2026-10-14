@@ -316,7 +316,7 @@ inferred: text message port), message id = bytes 0–1; event `0x2000` when byte
 ### 7.7 FID `0x10` opcode `0x27` (code-verified gating, meaning inferred)
 
 `3BA6C` bit 5 (accept) and bit 6 (ACK) come from `0301EC88`/`0301EC94`, called only by `0305DA8C`
-(caller `030582BE`, channel load). `0305DA8C(…, w)` takes a channel-derived word: bit 31 → bit 5, bit 30 → bit 6,
+(caller `030582BE`, channel load). `0305DA8C(…, w)` takes channel record bytes `+0x08..+0x0B` as `w` (byte `+0x0B` = bits 31:24): bit 31 → bit 5, bit 30 → bit 6,
 bits 28:24 = a 1–15 index into an emergency-system record copied to `3FD7E..3FD8B` (field names inferred: alarm type, mode, repeat
 counts). With bit 6, `rxcsbk` answers `0x20/0xA7` and runs UI action type 6 (alarm display). So `0x27` is
 inferred to be an **emergency alarm** addressed to a contact/group, accepted only on channels whose emergency
