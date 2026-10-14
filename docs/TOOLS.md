@@ -21,7 +21,7 @@ See [REPRODUCIBILITY.md](REPRODUCIBILITY.md) for `firmware/tests/run_tests.py`, 
 `tools/setup_cloud.sh` installs static-analysis tooling on Ubuntu 24.04 (idempotent, no radio or firmware access):
 
 - OpenJDK 25 (Ubuntu package).
-- GNU binutils 2.42 for `csky-elfabiv2` built from the Ubuntu source package into `/opt/csky-binutils` (`as`, `ld`, `objdump`, `objcopy`, `readelf`). Decodes CK803 code, e.g. `csky-elfabiv2-objdump -D -b binary -m csky:ck803 -EL`. Mnemonics may differ slightly from the pinned T-HEAD objdump 2.27.
+- GNU binutils 2.42 for `csky-elfabiv2` built from the Ubuntu source package into `/opt/csky-binutils` (`as`, `ld`, `objdump`, `objcopy`, `readelf`). Mnemonics may differ slightly from the pinned T-HEAD objdump 2.27. **Do not use `-b binary`** for whole-image listings: checked 2026-10-14, it splits 32-bit instructions into `.long` halves and prints wrong `lrw` pool addresses. Wrap the bytes in an ELF (`.incbin`) as `tools/dm32` does, see [DM32RE_TOOLS.md](DM32RE_TOOLS.md).
 - Ghidra 12.1.4 PUBLIC (official GitHub release, zip SHA-256 `ddac49f903da9d5bac833e5cc79395098b9c33cfd3279be5f31bd00387d2d4db`, computed on download 2026-10-13; not compared with a vendor-published hash).
 - Ghidra has no built-in C-SKY module. The script installs the legacy module from `analysis/ghidra_csky_module` (language `CSKY_V2:LE:32:default` version 0.2, supplied by the owner from the original Windows setup) and overlays `analysis/ghidra_scripts/32b_data.fixed.sinc`, then compiles SLEIGH. Only the data/language part is installed; the ELF relocation handler source is kept in the module directory but not built, which does not matter for raw payload or GZF imports.
 - Optional `--with-gcc`: upstream GCC 13.3 for `csky-elfabiv2` (C only, libgcc, ~25 min build). Useful for compile/link/size checks of `firmware/source` with `-mcpu=ck803`. It is **not** the pinned T-HEAD GCC 6.3.0 and does not reproduce the installed module bytes; byte-exact builds still require the T-HEAD toolchain. Checked 2026-10-13: all 12 scanner-candidate C modules compile with the build_csky.ps1 flags and `-Werror`, and the linked module is 4491 bytes (T-HEAD build: 4458) within the 0x1800 window.
@@ -40,3 +40,9 @@ Private inputs (`analysis/inputs/*.bin`) are not in Git, so a fresh cloud sessio
 | Supplied module + `32b_data.fixed.sinc` (installed by the script) | 0 | identical |
 
 The prebuilt `C-SKY.jar` from the zip was not committed or installed; its source (ELF relocation handler only) is in `analysis/ghidra_csky_module/src`.
+
+## dm32re analysis CLI (2026-10-14)
+
+`python3 tools/dm32 …` provides annotated listings, callers/callees/call trees, RAM/MMIO access search, string
+uses, look-alike functions, cached Ghidra decompilation from the GZF and uC/OS-III identification. Details,
+limits and tests: [DM32RE_TOOLS.md](DM32RE_TOOLS.md). The reference corpus needs `--with-gcc`.
