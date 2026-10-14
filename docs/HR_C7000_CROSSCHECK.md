@@ -66,10 +66,12 @@ Datasheet table 53 (pp. 313–314), receive RAM base `0x160004B0`: frame payload
 `0x1F…0x24` and of slot 1 at `0x25…0x2A`, CACH short LC at `0x2B…0x2F`, **216-bit voice of slot 0 at `0x36…0x50`
 (time-slot mode) or `0x39…0x53` (continuous mode), of slot 1 at `0x66…0x80` / `0x69…0x83`**, RX key at `0x495`.
 
-Firmware (code-verified, `03028644` at `0302890A…0302897C`): the voice copy reads 27 bytes with `0300D41C(off, …)`
-where `off` = `0x66` if status bit 19 (`current_rx_slot`) is 1, else `0x36`; in RX mode 4 the continuous-mode
-offsets `0x69`/`0x39` are used. So the chip keeps **separate voice buffers per slot** and the firmware picks the
-buffer by the hardware slot bit, not by the software slot `3BEA8`. The destination ping-pong buffer `3C69C` is
+Firmware (code-verified, `03028644` at `03028902…0302897C`): the voice copy reads 27 bytes with `0300D41C(off, …)`.
+In RX mode 4 `off` = `0x66` if status bit 19 (`current_rx_slot`) is 1, else `0x36`; in all other modes `0x69` /
+`0x39`. (The datasheet labels `0x36`/`0x66` "time-slot receive mode" and `0x39`/`0x69` "continuous receive mode";
+the firmware uses the latter pair on normal TDMA channels — why is not established, but the per-slot split is the
+same.) So the chip keeps **separate voice buffers per slot** and the firmware picks the buffer by the hardware
+slot bit, not by the software slot `3BEA8`. The destination ping-pong buffer `3C69C` is
 still shared (`TS_ANALYSIS.md` §8), so the one-captured-slot rule for TS Match off is still required.
 
 ## 3. Decisions

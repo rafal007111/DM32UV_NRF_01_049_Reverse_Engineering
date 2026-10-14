@@ -44,6 +44,8 @@ Bytes are in image order (little-endian halfwords; 32-bit instructions are store
 
 ### 3.2 TS sites — BS-sourced slot gate `ld.b (3BEA8); ld.b (33CC8+4); cmpne; bt drop`
 
+*Note 2026-10-14 (fifth pass): the gate rule, TX-neutrality measures, captured-slot RAM and final TS site list in §3.8 supersede the proposals in §3.2–3.5; the site bytes below were re-checked and are unchanged.*
+
 | Function / mode | VA | Stock bytes |
 |---|---|---|
 | `03028644` mode 0 | `03028708` | `6f 12 40 83 6f 12 64 83 ca 64 60 e8 68 02` |
@@ -142,6 +144,120 @@ The `0301E73C` site uses the same Monitor idiom as the four voice sites, so the 
 (§3.1) can serve it; `0301EC40(0)` would additionally have to keep bit 8 when CC Match off is set. Mode 4 already
 forces bit 8. `RF_MODE.adjustsyncmax` is not written by stock firmware even when `cc_opt = 1`; leave it unchanged
 unless an owner test (`HR_C7000_CROSSCHECK.md` §5) shows a problem.
+
+### 3.8 TS Match off — design closure (2026-10-14, fifth pass; supersedes the open points of §3.2–3.5)
+
+Inputs and tools as in `HR_C7000_CROSSCHECK.md` §0. All sites below are code-verified in `flash.asm`/`iram.asm`;
+the behaviour of the proposed changes is **inferred design**. Nothing is built.
+
+**Scope.** The programmed-slot gates exist only for **BS-sourced** bursts (status bits 3:2 = 1). MS-sourced bursts
+(bits 3:2 = 0, direct mode) are already accepted on either slot in stock firmware with a first-come rule
+(`RX_CALL_PATH_ANALYSIS.md` §2), and RX mode 4 (DCDM) and mode 2 have their own gates. TS Match off therefore only
+changes reception of a **repeater downlink** (mode 1, or a mode-0 simplex channel programmed on a repeater output).
+There is no hardware slot filter (`HR_C7000_CROSSCHECK.md` §3.2). Notation: **A** = programmed slot `33CCC`,
+**B** = the other slot.
+
+#### 3.8.1 Receive-path consumers of the burst slot vs. the TX slot (code-verified)
+
+| Consumer | Index used | With a captured B call | Proposal |
+|---|---|---|---|
+| Voice copy `03028644` → `3C69C` | burst slot `3BEA8` and hardware bit 19 | correct (copies only for `3C620[slot]`) | none |
+| `begin_v_layer2` `03023828` (per tick) | `3C620[3BEA8]` | opens voice delivery on B automatically | none |
+| LC/terminator/late-entry stores `3C63C+12·s`, `3C62C[s]`, `3C634[s]`, `3C624[s]`, `3C626[s]`, `3C628/3C62A[s]` | burst slot | correct per slot | none |
+| Global call fields `3C61C` (group), `3C61D`, `3C61E`, `3C61F` (service options) | — (last accepted header) | follow the captured call; safe while only one slot is captured | none |
+| Talker alias buffer `3BA70` (`03028BE4`, FLCO 4–7) → event `0x40000000` → `psint` → `0301EE6C` | — (global) | filled only by bursts that pass the late-entry gate; with the capture rule only the captured slot (or either slot while idle) writes it | none |
+| `rxvoice` `03020714`: `3BA60`/`3BA64` = dst/src of `3C62C/3C634[3BEAA]` (every event) | TX slot | stays the A values | **keep stock**: `3BA64` feeds `0301EC14` → `0305EB8C` CSBK actions (TX targets), `3BA60` only the home-screen numeric fallback and `0302C4FC` |
+| `rxvoice` `030207AA`: call descriptor `3BD48` (dst/src) on event 2 | TX slot | would show A's stale IDs | **change** to the captured slot (site T7) |
+| `rxvoice` `030208FA`: PI header `3C684+12·s` on event 1 | TX slot | B PI headers are not admitted (§3.8.2) | keep stock; encrypted B calls are not decrypted (owner decision) |
+| UI `0305E3F0` (call display, call-start tone, `3E0DC+0x10/0x14`), `0305E5E4`/`0305E654` (call end) | descriptor `3BD48` | correct once T7 is applied | none |
+| PTT talk-back `0305C334` → `0305C1E0`: during the call display (`3FDEC` bit 0) or RX hang (`3BA68 == 1`, set by `0301E834` from `rxvoice`) PTT addresses the received call (`3E0DC+0x14` class 1 → `3E0DC+0x10` source, 2/3 → `3BD48` dst) | descriptor | a B call would redirect PTT to B's group/caller while TX stays on slot A | **guard** (site T9): treat a displayed B call like the stock "no talk-back" setting (`3FD4C+0x1E` bits 6:4 = 2) — owner decision |
+| Home screen `0302B9A4`: `T1`/`T2` from channel byte `3E205` bit 4 (`0302BB56`), `CC:%d` from `3C61A` | programmed slot | shows the programmed slot during a B call | optional display site (T10), owner decision |
+| Scanner busy `0302ED04` → `0301ED00` (`3BA59`, `3C622|3C623`, `3BA55`) | — | scan stops on a captured B call | none (desired; owner to confirm) |
+| Recording `030218B0` → `00015FA4(2)`/`0302123C(1)` | — (audio open) | B calls are recorded like A calls | none (owner to confirm) |
+| Call log (`Call Log`/`Missed Call` strings) | writer not located | unknown | unreviewed |
+| `0305E3F0` → `0305D338` → `0301EAE8(8)`, `0305E390` | — | a B call start cancels a pending own command / alarm state like an A call | none (stock reaction to "call shown"; owner to confirm) |
+| TX slot chooser `030237B8`, `03023AFC`, `03027320` | `3BEAA` / `3C620[3BEAA]` / `3C624[3BEAA]` | unaffected while `3BEAA` stays A | none |
+
+#### 3.8.2 Gate rule for BS-sourced bursts (replaces the four `cmpne`/`bt` gates of §3.2)
+
+`ts_gate` keeps the stock result when TS Match is on. When it is off:
+
+| Burst | Admit when | Drop when |
+|---|---|---|
+| slot A, any type | always, except below | A voice-start (data type 1 LC header in `03028644`, any burst at the `03028BE4` late-entry gates) while `3C620[B] == 1` (first-come capture) |
+| slot B, `03028644`, sync 01 (voice burst) | `3C620[A] == 0` and `3C622[A] == 0` | otherwise |
+| slot B, `03028644`, sync 10 data type 1 (LC header) or 2 (terminator) | same | otherwise |
+| slot B, `03028644`, sync 10 data type 9 (Idle) | never; **if `3C620[B] == 1`: clear it and post event 4** (what `030275F4` does for the call, without its `3BEAB`/`3BEAF` writes and the `0x200` TX-waiter event) | always |
+| slot B, `03028644`, any other data type (PI header 0, CSBK 3, data 6/7/8/10, MBC) or sync 11 (RC) | never | always (no CSBK/data TX side effects, `DATA_PATH_ANALYSIS.md` §6) |
+| slot B, `03028BE4` late entry | `3C620[A] == 0` | otherwise |
+
+The B-Idle rule is needed because during a B call the repeater keeps sending A bursts, which reset the global
+13-tick timer `3BEB8`; without it a B call that lost its terminator would stay captured until the repeater drops.
+At each gate the decoded status is still in registers (`03028644`: `r1` = bits 1:0, `r0` = bits 11:8, `r12` =
+bits 3:2; `03028BE4`: `r4` = bits 3:2, `r3` = status word). Stock clobbers only `r2`/`r3` (`03028644`) or `r1`/`r2`
+(`03028BE4`) at these sites; the cave must preserve everything else and must save/restore registers around the
+`0300C724(4)` call. Programmed-slot priority (A pre-empts B) instead of first-come would need writes at the
+`3C620[slot] = 1` accept points of `030282A4` (`0302834A`, `03028470`, `0302859C`) and `03028BE4`; listed as the
+alternative for owner question 1 below.
+
+#### 3.8.3 TX neutrality
+
+| TX input (read-only subjects untouched) | Effect of an admitted B burst | Measure |
+|---|---|---|
+| `3BEAB` RX activity (`030272EC`, policies 1/2 in mode 1) | set by `03028644` (voice path, before the `3C620` test), `030282A4` (after the CC gate, before the destination filter), `03028BE4`, `03028180` | wrapper at the dispatcher calls (sites T5/T6): save `3BEAB`, call the handler, restore it when TS off, status bits 3:2 = 1 and `3BEA8 != 33CCC` — exactly the bursts stock drops before touching `3BEAB` |
+| `3BEAA`/`3BEAC`, `33CCB`/`33CCC` | B is BS-sourced, so the MS-only copies in `030282A4`/`03028BE4` do not run; **but** `030282A4` FID `0x10` header with FLCO bit 2, rejected by the filter and `33CDD == 0` (`030284D4…03028514`) writes all four slot bytes from LC byte 6 and may retune (`03023C10`) — Capacity-Plus-style follow, no mode check | guard site T8: skip that branch for B bursts |
+| `3C624[3BEAA]` (`03027320`) | indexed by `3BEAA` = A | none |
+| `3BA55` call shown (`0301DE64` request type 3, `0301ED00`) | set by `rxvoice` for a B call | owner decision (stock refuses data/CSBK sends during any shown call) |
+| `3BA68` hang state (`030272EC` ignores busy when it is 2 = own TX hang) | a B call sets 1 (RX hang) | owner decision (same as an A call in stock) |
+| PTT talk-back target | redirected to the B call | guard T9 |
+| CC (`03027334`) | `3C61A` = last received CC; B bursts pass the same CC gates | none |
+
+#### 3.8.4 Captured-slot RAM byte
+
+`3BEBD..3BECB` (15 bytes) is free (inferred, method below): it lies in the BSS that the reset code zeroes
+(`0300C05C…0300C072`: `0x2F0B4…0x4A7E0`, word loop, code-verified); a register-tracking scan of every catalogued
+function plus the task entries (`lrw`/`mov`/`addi` propagation, constant offsets and `ldr`/`str` bases) found no
+access to `3BEBD..3BECB` and no indexed access based in `3BE68..3BECB` (the same scan finds all 40 known
+`3BEB8..3BEBC` accesses and the three `rxvoice` `3BEAA` loads); a raw word search finds no literal between
+`3BEB0` and `3BECB`. Proposal: `3BEBD` = slot of the displayed call (written by the T7 cave), read by the T9 guard.
+
+#### 3.8.5 Final site list (stock bytes in image order; identical in the installed image `156a4872…`)
+
+| Id | VA | Stock bytes (guard) | Instruction(s) | Proposed change |
+|---|---|---|---|---|
+| T1 | `03028708` | `6f 12 40 83 6f 12 64 83 ca 64 60 e8 68 02 b5 04` | `lrw r3,3BEA8; ld.b r2,(r3,0); lrw r3,33CC8; ld.b r3,(r3,4); cmpne r2,r3; bt 03028BE2; br 03028880` (`03028644` mode 0, BS) | first 4 bytes → `bsr ts_gate_644` (sets C = drop), next 6 bytes → 3 × `nop`; `bt`/`br` unchanged |
+| T2 | `030287B8` | `63 11 40 83 63 11 64 83 ca 64 60 e8 10 02 5d 04` | same, mode 1 | same |
+| T3 | `03028C32` | `4a 12 20 82 48 12 44 82 86 64 60 e8 6b 03 45 04` | `lrw r2,3BEA8; ld.b r1,(r2,0); lrw r2,33CC8; ld.b r2,(r2,4); cmpne r1,r2; bt 03029312; br 03028CCA` (`03028BE4` mode 0) | `bsr ts_gate_be4` + 3 × `nop` |
+| T4 | `03028C74` | `59 11 20 82 57 11 44 82 86 64 60 e8 4a 03 24 04` | same, mode 1 | same |
+| T5 | `03023A12` | `00 e0 19 26` | `bsr 03028644` in `030239D4` | `bsr rx_wrap_644` (save/restore `3BEAB`, §3.8.3) |
+| T6 | `03023A1E` | `00 e0 e3 28` | `bsr 03028BE4` | `bsr rx_wrap_be4` |
+| T7 | `030207AA` | `48 d8 02 00` | `ld.b r2,(r8,0x2)` (`rxvoice` event 2, slot for `3BD48`) | `bsr slot_of_call` returning in `r2` the slot whose `3C620` is set (`3BEAA` when TS on or none), storing it in `3BEBD` |
+| T8 | `030284D4` | `7b 10 75 83` | `lrw r3,33CC8; ld.b r3,(r3,0x15)` then `bnez` skip (`030282A4` FID `0x10` follow branch) | `bsr follow_guard`: return `r3 ≠ 0` (skip) for a B burst when TS off, else `33CDD` |
+| T9 | `0305CB6C` | `7b 12 7e 83` | `lrw r3,3FD4C; ld.b r3,(r3,0x1E)` (join point of the talk-back test in `0305C334`) | `bsr talkback_guard`: return `0x20` (no talk-back) when TS off and `3BEBD != 33CCC`, else the stock byte |
+| T10 (optional) | `0302BB56` | `7b 10 6d 83` | `lrw r3,3E1F8; ld.b r3,(r3,0xD)` (home `T1`/`T2`) | display the slot of the shown call (owner decision) |
+| — | `03020714`, `030208FA` | `68 d8 02 00`, `48 d8 02 00` | `rxvoice` `3BA60/3BA64` and PI-header slot | **unchanged** (§3.8.1) |
+
+All patched functions keep their `push … r15` prologues (code-verified for `03028644`, `03028BE4`, `030239D4`
+`push r4,r15`, `030206D0` task loop with other `bsr` calls, `030282A4`, `0305C334`), so a `bsr` at these sites
+is safe. The T3/T4 caves must preserve `r3` (status word, used at `03028CD0`/`03028CF8`). Every branch target
+listed is inside its own function. Code space: four small caves plus the wrapper, estimated < 400 bytes together
+with §3.1 (inferred), within the 1686-byte window of §4.
+
+#### 3.8.6 Open questions for the owner
+
+1. First-come capture (the stock MS-sourced rule, proposed) or programmed-slot priority (A pre-empts B; more sites)?
+2. During a B call: should PTT talk back to the B caller (on slot A) or use the channel contact (proposed, T9)?
+3. Should data/CSBK sends be refused while a B call is shown (`3BA55`, stock behaviour for A calls)?
+4. Should the home screen show the slot of the received call (T10)?
+5. Should encrypted B calls be decrypted (would need B PI headers, `030208FA` and `03027584` changes)?
+
+#### 3.8.7 RX-only hardware tests (stock firmware, to prepare the design)
+
+| Item | Test | Expected |
+|---|---|---|
+| A-slot Idle during B traffic | SDR (dsd-fme) on a busy repeater: watch both slots while only B carries a call | Repeater sends Idle bursts on A while B is active (confirms why the B-Idle rule is needed) |
+| Talk-back | Stock radio: receive a group call that is not the channel contact, press PTT within the hang time | Radio transmits to the received group (confirms §3.8.1 talk-back reading) |
+| Scan stop | Stock radio scanning a list containing the repeater, traffic only on the other slot | Scan does not stop (stock); with TS off it would stop |
 
 ## 4. Code and RAM placement (constraints found)
 
