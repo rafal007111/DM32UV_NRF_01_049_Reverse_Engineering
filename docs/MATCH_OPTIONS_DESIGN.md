@@ -108,6 +108,24 @@ In stock firmware these only reflect the programmed slot, so TS Match off change
 `3BEAB` for own-slot bursts only (e.g. store other-slot activity in a separate byte). Whether PTT should be refused
 while another-slot call is heard is an **owner decision**; the requirement "TX/PTT unchanged" implies it should not.
 
+### 3.6 TX admit policy by channel mode (code-verified, read-only subject)
+
+Policy = channel record byte `+0x0A` bits 6:4, loaded by the channel load `03057790` (`030583F6`) through
+`0300C3B4` into `33CD0`; callers pass it as the second argument of `0301DF8C`. A return of 1 means "refuse"
+(`33CDB = 1`, busy prompt). Names "Always / Channel Free / Colour Code Free" are inferred from the CPS convention.
+
+| Channel mode (`33CC9`) | Policy 0 | Policy 1 | Policy 2 | Inputs |
+|---|---|---|---|---|
+| 0 simplex / 4 Double Slot | allow | refuse if RF carrier `33CDC` | refuse if carrier and last RX CC `3C61A == 33CCD` (`03027334`) | `33CDC` = `3FDD8` bit 5, set by the RF carrier poll `0306081C`/`03060E60` (cleared after 31 polls without carrier) |
+| 1 repeater (`0301DE64`, after wake-up `03029C3C` and slot lock) | allow | refuse if busy (`030272EC`: `3BEBB` or `3BEAB`) and no terminator just seen (`3C624[3BEAA] != 1`) | as policy 1 but only when the last RX CC equals `33CCD` | `3BEAB`, `3BEBB`, `3C624`, `3C61A` |
+| 2 (`0301DF0C`) | allow | refuse if call/data on `3BEAA` (`03023AFC`) and `3C624[3BEAA] != 1` | same plus CC test | `3C620/3C622[3BEAA]` |
+| any, request type 3 | — | refuse if busy or `3BA55` | — | |
+
+Consequences: in modes 0 and 4 the admit test uses the RF carrier and the last received CC, not slot state, so
+TS Match off does not change it (a carrier is present either way). In mode 1 only `3BEAB` and `3BA55` would be
+touched by an other-slot capture (§3.5). CC Match off does not change `3C61A` handling (the dispatcher stores
+the received CC before any gate in stock firmware), so policy 2 keeps its stock meaning.
+
 ## 4. Code and RAM placement (constraints found)
 
 - The installed Scan Zone module occupies `030DFCEC..030E0E56` inside a `0x1800` window ending at `030E14EC`.
