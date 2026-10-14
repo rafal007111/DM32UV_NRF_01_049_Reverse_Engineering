@@ -30,3 +30,5 @@ Design note: the stock Monitor flag (`3BA6C` bit 3) covers the first four rows b
 private-call filter in `0302768C`. A CC-only option therefore needs its own flag tested at the RX rows above, with
 `03027334` (TX) excluded. The natural menu home is next to `PCall Match`/`GCall Match` in the Other menu
 (`docs/TS_ANALYSIS.md` §5).
+
+2026-10-14: hardware `cc_opt` (`11000384` bits 9:8) and the full design are in [CC_MATCH_DESIGN.md](CC_MATCH_DESIGN.md).

@@ -1,0 +1,9 @@
+#!/usr/bin/env python3
+"""Entry point: python3 tools/dm32 <command> ...  (see tools/dm32re/cli.py)."""
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from dm32re.cli import main  # noqa: E402
+
+sys.exit(main())
