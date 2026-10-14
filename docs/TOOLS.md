@@ -32,7 +32,7 @@ Private inputs (`analysis/inputs/*.bin`) are not in Git, so a fresh cloud sessio
 
 ### Legacy CSKY module match (2026-10-13)
 
-`analysis/archives/DM32_NRF_049_correct_base.gzf` requires CSKY language version 0.2; every upstream `leommxj/ghidra_csky` commit declares 0.1, so the earlier cloud reconstruction could not open it. The owner supplied the legacy module (upload zip SHA-256 `0525fa540c133939ec3be666205ec2e23feeed5fd7bbce29d3581c66f08be1ad`). Its `32b_data.sinc` lacks the two DM32 fixes in `32b_data.fixed.sinc` (`decne` and the `movih` zext form). Headless GZF import results:
+`analysis/archives/DM32_NRF_049_correct_base.gzf` requires CSKY language version 0.2; every upstream `leommxj/ghidra_csky` commit declares 0.1, so the earlier cloud reconstruction could not open it. The owner supplied the legacy module (upload zip SHA-256 `0525fa540c133939ec3be666205ec2e23feeed5fd7bbce29d3581c66f08be1ad`). Its `32b_data.sinc` lacks the DM32 fixes in `32b_data.fixed.sinc` (`decne`, the `movih` zext form and, since 2026-10-14, fix 3: `zext`/`sext` extract bits msb..lsb inclusive; see `RX_CALL_PATH_ANALYSIS.md` §0.1). Headless GZF import results:
 
 | Module variant | Bad instruction prototypes | Inventory vs checked-in |
 |---|---:|---|
@@ -40,3 +40,7 @@ Private inputs (`analysis/inputs/*.bin`) are not in Git, so a fresh cloud sessio
 | Supplied module + `32b_data.fixed.sinc` (installed by the script) | 0 | identical |
 
 The prebuilt `C-SKY.jar` from the zip was not committed or installed; its source (ELF relocation handler only) is in `analysis/ghidra_csky_module/src`.
+
+### Static helpers (2026-10-14)
+
+`tools/static/objdump_image.sh` wraps the flash and IRAM regions in ELF files so binutils decodes 32-bit C-SKY instructions (`-b binary` prints `.long`). `tools/static/resolve_ptr_literals.py` replaces `PTR_DAT_x` names in an `ExportDM32.java` export with the literal values; `tools/static/decomp_grep.py` greps the export with the owning function. All are read-only; run Python helpers with `-I`.
