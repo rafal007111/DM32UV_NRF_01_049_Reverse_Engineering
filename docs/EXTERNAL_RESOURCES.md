@@ -6,21 +6,23 @@ Third-party binaries and documents are not copied into this repository.
 
 ## HR_C7000 datasheet (highest value)
 
-Two Chinese HR_C7000 documents (2017, Word 2010 exports) are mirrored in
-[yo3hjv/Baofeng-DM32 `chipset_docs/`](https://github.com/yo3hjv/Baofeng-DM32/tree/main/chipset_docs)
-(originally connectsystems.com, blocked from the cloud session):
-`HR_C7000 Document 1.pdf` (96 pages, SHA-256 `a2507062…ca52`) and `HR_C7000 Document 2.pdf`
-(412 pages, SHA-256 `d60f652e…0253`). Document 1 memory map: `0x1100_0000–0x1100_FFFF` = Modem (64 KB).
-Document 2 §4.6.5 (baseband system control) and §10.2 (DMR layer-2 registers), base `0x1100_0000`:
+Document 2 is versioned in this repository as [`docs/HR_C7000 Document 2.pdf`](HR_C7000%20Document%202.pdf)
+(Chinese, 412 pages, Word 2010 export dated 2017-07-19, SHA-256
+`d60f652e114d5103b2252be604089528775dffa263c703545d7cfed9fe490253`, 9 913 753 bytes; identical to the copy in
+[yo3hjv/Baofeng-DM32 `chipset_docs/`](https://github.com/yo3hjv/Baofeng-DM32/tree/main/chipset_docs), originally
+connectsystems.com). Document 1 (96 pages, SHA-256 `a2507062…ca52`) is only in that mirror. Page numbers below are
+PDF pages of Document 2 (they equal the printed "第 N 页" numbers). Memory map p. 89:
+`0x1100_0000–0x1100_FFFF` = Modem (64 KB). Registers from §4.6.5 (baseband system control) and §10.2 (DMR layer 2,
+register table 28 on p. 297), base `0x1100_0000`:
 
-| Register | Offset | Datasheet fields (translated) | Firmware cross-check (tools/dm32) |
-|---|---|---|---|
-| `WORK_MODE` | `0x100` | bit8 digital+analog auto-detect; bit7 0=DMR/1=FM; bit6 TierI/II; bit5 continuous/TDMA; [4:3] layer mode; bit2 repeater; bit1 aligned; **bit0 `work_slot_sel` 0=TS1, 1=TS2** | written by `0301ECC0` (bit0), `0301E580`, `030215C8`, IRAM `000169D8`/`00016AD0` |
-| `LOCAL_CC` | `0x384` | bit16 encryption type; **[9:8] `cc_opt`: 0 = decode only frames whose CC equals local CC; 1 = decode frames with any correctly received CC; 2/3 = decode nothing**; [3:0] local CC (default 1) | `0301EC40` clears [9:8] and sets bit8 when Monitor is on → `cc_opt=1`; IRAM `0002D7C8` writes [3:0] |
-| `RX_TYPE_INFO` | `0x390` | RO: [30] CRC8 err, [29] Golay err, [28] QR err, [27] checksum err, [26] CRC16 err, [25] RS24 err, [24] data block err, [23] CACH AT, [22] CACH TC, [21:20] CACH LCSS, **[19] current RX slot**, [17] PI, [16:15] LCSS, [14:12] voice burst A–F, **[11:8] data type, [7:4] received CC**, [3:2] sync type MS/BS/TDMA1/TDMA2, [1:0] none/voice/data/RC | `0002C458` copies it to RAM `3BECC`; `03028644` extracts exactly these fields; also read by `0002D500`, `03024868`, `03027B9C`, `030282A4` |
-| `LAYER2_CONTROL` | `0x400` | txen/rxen sync enables, slot master/slave modes | – |
-| `LAYER2_SLOTON` | `0x404` | RX/TX slot-on flags and controls (layer-2) | – |
-| `LAYER2_TXRX_CTRL` | `0x408` | TX complete, layer-2 RX sync-loss control, … | IRAM `0002D7C8`, `030215C8` |
+| Register | Offset | Page | Datasheet fields (translated) | Firmware cross-check (tools/dm32) |
+|---|---|---|---|---|
+| `WORK_MODE` | `0x100` | 97 (§4.6.5.7) | bit8 digital+analog auto-detect; bit7 0=DMR/1=FM; bit6 TierI/II; bit5 continuous/TDMA; [4:3] layer mode; bit2 repeater; bit1 aligned; **bit0 `work_slot_sel` 0=TS1, 1=TS2** | written by `0301ECC0` (bit0), `0301E580`, `030215C8`, IRAM `000169D8`/`00016AD0` |
+| `LOCAL_CC` | `0x384` | 301 (§10.2.2.11) | bit16 encryption type; **[9:8] `cc_opt`: 0 = decode only frames whose CC equals local CC; 1 = decode frames with any correctly received CC; 2/3 = decode nothing**; [3:0] local CC (default 1) | `0301EC40` clears [9:8] and sets bit8 when Monitor is on → `cc_opt=1`; IRAM `0002D7C8` writes [3:0] |
+| `RX_TYPE_INFO` | `0x390` | 302 (§10.2.2.14) | RO: [30] CRC8 err, [29] Golay err, [28] QR err, [27] checksum err, [26] CRC16 err, [25] RS24 err, [24] data block err, [23] CACH AT, [22] CACH TC, [21:20] CACH LCSS, **[19] current RX slot**, [17] PI, [16:15] LCSS, [14:12] voice burst A–F, **[11:8] data type, [7:4] received CC**, [3:2] sync type MS/BS/TDMA1/TDMA2, [1:0] none/voice/data/RC | `0002C458` copies it to RAM `3BECC`; `03028644` extracts exactly these fields; also read by `0002D500`, `03024868`, `03027B9C`, `030282A4` |
+| `LAYER2_CONTROL` | `0x400` | 303 (§10.2.2.16) | txen/rxen sync enables, slot master/slave modes | – |
+| `LAYER2_SLOTON` | `0x404` | 304 (§10.2.2.17) | RX/TX slot-on flags and controls (layer-2) | – |
+| `LAYER2_TXRX_CTRL` | `0x408` | 305 (§10.2.2.18) | TX complete, layer-2 RX sync-loss control, … | IRAM `0002D7C8`, `030215C8` |
 
 Status: register semantics are **datasheet-documented**; the firmware sites are **code-verified** (instruction
 level). Together they make the Monitor hypothesis concrete: bit 8 of `11000384` switches the hardware to accept
