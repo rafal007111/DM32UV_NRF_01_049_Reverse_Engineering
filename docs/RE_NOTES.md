@@ -68,3 +68,8 @@ Ghidra 12.1.4 + legacy CSKY v0.2 with a new SLEIGH fix (`zext`/`sext` were one b
 ### Settings menus, CPS framing and RF chip (2026-10-14, second pass)
 
 Same inputs/tools as the entry above; static only. code-verified: Radio Settings menus (Voice/Key/Display/Other Func) mapped item by item to setting ids and block-4 storage; Voice Func `Group Call`/`Private Call` are the call-start tone options; Other Func `MOTO` is stored but never read. Block 4 `0x60` bits 2–7 and RAM `3BA6D` bits 5–7 have no reader (candidate storage for TS/CC Match, CPS behaviour to be checked). CPS session framing (`V`/`C`/`S`/`G` frames, sector addresses, raw SPI-flash writes) documented. Strong inference: the RF chip uses the BK4819 register map (AM airband path via AF type 7) and `0305F2F4` is a system restart. Details: [SETTINGS_CPS_ANALYSIS.md](SETTINGS_CPS_ANALYSIS.md).
+
+### TS/CC Match patch-site inventory (2026-10-14, design only)
+
+No image built. [MATCH_OPTIONS_DESIGN.md](MATCH_OPTIONS_DESIGN.md) lists the four Monitor-style CC gates (same `andi r,r,8` idiom on `3BA6C`), the embedded-CC counter and the four BS slot gates with stock bytes (identical in the installed image), proposed flag bits (`3BA6D` bits 5/6, block 4 `0x60` bits 2/3), and a placement constraint: the Scan Zone window ends exactly at the official payload end `030E14EC`, leaving 1686 zero bytes; space beyond lies outside the updater payload and is unreviewed. All inferred.
+
