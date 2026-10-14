@@ -50,3 +50,5 @@ Code-verified: the current scanner module rebuilt with T-HEAD C-SKY Tools V3.10.
 `analysis/ghidra_scripts/DecompAt.java` decompiles functions by address in a read-only headless run and creates a temporary function where Ghidra has none.
 
 Detailed Monitor analysis (dispatch, setter state, RX data-type table, talkgroup filter bypass, lifetime and owner test): `docs/MONITOR_ANALYSIS.md`. It supersedes the "inferred" bullet above: Monitor is a temporary promiscuous **voice** mode (CC and talkgroup filtering bypassed for voice LC header/terminator/late entry), while PI header and packet data still require a matching CC.
+
+Time slot analysis (channel fields, RX modes, per-burst CACH TC slot tracking, receive slot gates, existing PCall/GCall Match options): `docs/TS_ANALYSIS.md`. Summary: the firmware labels every burst with its slot in software and drops the non-programmed slot in `03028644`/`03028BE4`; whether `11000100` bit 0 also filters in hardware is not established.
