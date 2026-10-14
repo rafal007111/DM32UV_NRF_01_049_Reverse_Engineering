@@ -94,6 +94,20 @@ BSS-zeroed at boot is unverified). Writing the burst slot there in the accept pa
 keeps stock behaviour when TS Match is on, because the value then equals `3BEAA`. The 32-bit `ld.b` form allows any
 offset, so each `rxvoice` site is a guarded 4-byte change (`02 00` → `15 00` for offset `0x15`).
 
+### 3.5 Interaction with TX admission (code-verified reads; consequence inferred)
+
+`0301DE64` (TX admit, read-only subject) uses three receive-side values that a captured other-slot call would set:
+
+| Value | Set by (receive side) | Read by | Effect if set by an other-slot capture |
+|---|---|---|---|
+| `3BEAB` RX activity | accept paths of `030282A4`, `03028180`, `03028BE4`, `03028644`, `03024E7C`, `03025480`, `03027584`, `03027B9C` (all after the slot gate); cleared by Idle `030275F4`, reset `03023364` | only `030272EC` (busy = `3BEBB` or `3BEAB`, unless `3BA68 == 2`) | "channel free" (policy 1) and "colour-code free" (policy 2) admission refuse PTT while the other slot is being received |
+| `3BA55` call shown | `rxvoice` event 2; cleared on call end | `0301DE64` for request type 3 | data/CSBK transmissions refused during the captured call |
+| `3C624[3BEAA]` | terminator handler | `03027320` | unaffected if `3BEAA` stays the programmed slot |
+
+In stock firmware these only reflect the programmed slot, so TS Match off changes PTT admission unless the caves keep
+`3BEAB` for own-slot bursts only (e.g. store other-slot activity in a separate byte). Whether PTT should be refused
+while another-slot call is heard is an **owner decision**; the requirement "TX/PTT unchanged" implies it should not.
+
 ## 4. Code and RAM placement (constraints found)
 
 - The installed Scan Zone module occupies `030DFCEC..030E0E56` inside a `0x1800` window ending at `030E14EC`.
