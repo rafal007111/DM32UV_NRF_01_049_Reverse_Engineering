@@ -13,12 +13,13 @@ No hardware test performed.
 | `03027584` | RX PI header | `3C61A` vs `33CCD` | no | bypass if encrypted-call headers should follow |
 | `03024E7C` | RX data header | `3C61A` vs `33CCD` | no | owner decision (data/SMS/GPS) |
 | `03025480` | RX packet data (types 7/8/10) | `3C61A` vs `33CCD` | no | owner decision |
-| `03027B9C` | RX CSBK | `33CCD` vs `3C61A` on some paths | no | owner decision (not fully traced) |
+| `03027B9C` | RX CSBK | one gate at entry: `3C61A == 33CCD`; only CC 15 + mode 4 + CT_CSBK bypasses (fully traced 2026-10-14, `RX_CALL_PATH_ANALYSIS.md` §3) | no | keep (see `DATA_PATH_ANALYSIS.md` §8) |
 | `03028644` (mode 4 slot gate) | RX mode 4 | CSBK with CC 15 exception | no | leave |
+| `03028644` (voice burst counter `3C626[slot]`) | RX: ends an active call after 7 consecutive non-sync voice bursts with foreign embedded CC | status CC vs `33CCD` | **no** | bypass (counter would otherwise end long foreign-CC calls without voice sync) |
 | `03027334` | **TX admit** ("colour-code free" policy in `0301DE64`) | `33CCD` vs `3C61A`, mode-4 CC 15 rule | no | **leave unchanged** (TX behaviour) |
 
 Writers of the configured CC: `0301E7BC(cc)` (`33CCD` and `11000384` bits 3:0; callers `030572B8` channel CC
-setting, `03057790`), IRAM `0002D7C8` (`11000384` bits 3:0 from `33CCD`, and `|0xF` in one branch, unreviewed).
+setting, `03057790`), IRAM `0002D7C8` (TX burst loader, mode 4 only: `11000384` bits 3:0 = 15 while transmitting a CT_CSBK, otherwise `33CCD`; TX behaviour, leave unchanged; `RX_CALL_PATH_ANALYSIS.md` §4).
 
 Hardware: `11000384` bits 3:0 hold the configured CC and bit 8 is set by Monitor and forced in RX mode 4. By the
 HR-C6000 analogy (OpenGD77 register `0x1F` LocalEMB CC, `0x21` "polite to colour code") these are the C7000

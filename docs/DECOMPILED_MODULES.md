@@ -11,10 +11,18 @@ The current Ghidra export has 2,171 function boundaries: 1,958 marked ok and 213
 | Zones | 03055C90, 0305660C | Zone record locator and current-channel lookup. |
 | Home display | 030317BC, 03031B7C | Observed scan-source label reads at RAM 3E196; full UI role partly inferred. |
 | Generic marker | 03039E34 | Generic UI selection mark; not the Scan List native tick path. |
-| DMR RX candidates | 030239D4, 03028644, 03028BE4 | Candidate dispatch/state/data processing. Full state-machine paths are not yet traced. |
+| DMR RX candidates | 030239D4, 03028644, 03028BE4 | Burst dispatch and gates; per-slot state traced 2026-10-14 (see RX call path rows). |
 | CC setting | 0301EC40, 0305CCF0 | CC filter setter/wrapper changes software and hardware state. End-to-end RX behavior still needs controlled tests. |
-| TS setting | 0301ECC0 | Receiver-state setter candidate. Not established as a dual-slot monitor switch. |
+| TS setting | 0301ECC0 | Runtime slot setter for the channel-menu item Time Slot (setting 5, menu id 6); not a dual-slot monitor switch (code-verified 2026-10-14). |
+| RX call events/UI | 0300C724, 0300C700, 0300CDB0, 0300CDC8, 0300CE80, 030206D0 (rxvoice), 0305F234 (psint), 0305F0F4, 0305E3F0, 0305E654, 0305E5E4, 030218B0, 0302197C, 0301D624 | Event 2 → rxvoice → UI call start/tones and audio open; event 4 call end. Code-verified; see docs/RX_CALL_PATH_ANALYSIS.md §1. |
+| Per-slot RX state/timers | 03028644, 03028BE4, 03028180, 030282A4, 0302343C, 03023394, 0002D620 (txslot loop), 0002D500 | 3C620 voice, 3C622 data, 3C624 terminator, 3C626 embedded-CC mismatch counter; global 13-tick burst-loss reset. Code-verified; §2. |
+| CSBK / TX burst loader | 03027B9C, 0302768C, 0002D7C8, 0301DF8C | Full CSBK opcode table; mode-4 CT_CSBK sent with CC 15; event 0x8000000 = slot lock for TX admit. Code-verified; §3–4. |
+| Analog Monitor/squelch | 0301742C, 03060398, 030603DC, 0300E2C0, 0300E360, 03060A74 | Monitor forces audio open and blocks squelch-close muting. Code-verified mechanism, register meanings inferred; §5. |
+| Channel menu/codeplug | 0304DDB0, 0304B158, 03056FFC, 030571CC, 03056680, 03055CCC, 0304B010 | Menu id → setting id → channel record byte +0x0D / block-4 offsets. Code-verified; §6, §8. |
+| Data internals | 03026E78, 030260C4, 03025B28, 0302695C, 03026600, 03029674, 03024908, 03053D74, 0305D764, 0305DA8C | Reply/segmentation/retransmission, own call start, DCDM timing, Inbox records, 0x27 gating. Code-verified structure; protocol names inferred; §7. |
 
 Supporting Ghidra outputs are in analysis/reference. Targeted menu work is in analysis/ghidra_scripts and the earlier workspace's integration_review/menu_flow artifacts. The current source modules are in firmware/source.
 
 The decompilation export spans the application, but most functions remain unreviewed. RF/DSP interrupt flows, DMR slot and color-code accept/drop decisions, audio/recording, GNSS/APRS/roaming, settings persistence and CPS protocol need further work. Consult confidence column in the CSV before relying on a routine.
+
+Note (2026-10-14): `analysis/ghidra_scripts/32b_data.fixed.sinc` fix 3 corrects `zext`/`sext`; 156 of 2171 functions now decompile differently (multi-bit bit fields were one bit short). Re-check decompiler-derived bit widths in older notes against the disassembly.

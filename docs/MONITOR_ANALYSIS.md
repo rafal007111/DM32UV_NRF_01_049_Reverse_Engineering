@@ -31,7 +31,7 @@ proven.
 
 `m` values 0/1/3 behave as analog / digital / digital-capable; their CPS names (Analog, Digital, mixed types) are **inferred**.
 
-`0301742C` (analog): if `3E337` bit 6 clear and `030140E4(0x11)` allows it, toggles analog monitor through `03060398`/`030603DC` (selected by `3E340`); otherwise tone `0x21`. Not reviewed further.
+`0301742C` (analog): if `3E337` bit 6 clear and `030140E4(0x11)` allows it, toggles analog monitor through `03060398`/`030603DC` (selected by `3E340`); otherwise tone `0x21`. Reviewed 2026-10-14: forces the audio path open and makes the squelch-close handler `0300E360` skip muting; see `RX_CALL_PATH_ANALYSIS.md` §5.
 
 `030174E0(m)` (digital):
 
@@ -56,7 +56,7 @@ Related register use (code-verified):
 
 - `0301E7BC(cc)` sets `33CCD` (`33CC8+5`) = channel Color Code and `11000384` bits 3:0 = `cc`. Called from `030572B8`, `03057790` (channel load path). So `11000384` holds the configured CC in bits 3:0 and a CC-related enable in bit 8.
 - `0301E580(digital, mode, slot)` (RX mode setup; callers `030215C8`, `03056330`) re-applies bit 8 and `3C61B` from the Monitor flag for non-mode-4 digital setups, and **forces** bit 8 for `mode==4`. It also sets `33CC9` (mode), `33CCB`/`33CCC` (slot) and `11000100` bit 0 (slot). Mode 4 meaning is unreviewed.
-- `0002D7C8` (IRAM) also writes `11000384` bits 3:0.
+- `0002D7C8` (IRAM, TX burst loader) also writes `11000384` bits 3:0 in mode 4 only: CC 15 while a CT_CSBK is transmitted, otherwise `33CCD` (`RX_CALL_PATH_ANALYSIS.md` §4).
 
 The hardware meaning of `11000384` bit 8 (HR-C7000 baseband) is **inferred** to be "accept any Color Code"; the software checks below are code-verified independently of it.
 
@@ -108,3 +108,12 @@ For the planned **CC Match off** setting this means:
 3. Expected if this analysis is right: voice audible with Monitor on, silent with Monitor off; SMS/GPS data still not received.
 4. Optional second test with the **correct** CC but a talkgroup outside your RX group list: Monitor on should make that traffic audible.
 5. Record which tone sounds on each press.
+
+## 8. Follow-up 2026-10-14
+
+See `RX_CALL_PATH_ANALYSIS.md`. Relevant to the Monitor test: during an accepted voice call `03028644` counts
+non-sync voice bursts whose embedded CC differs from `33CCD` in `3C626[slot]` and ends the call after 7 in a row,
+**without** a Monitor bypass; the counter is reset by every voice-sync burst, so normal foreign-CC traffic
+should still play (inferred). If the owner's wrong-CC Monitor test gives choppy audio or calls that drop after
+about half a second, this counter is the first suspect. The received call reaches the UI through event 2 →
+task `rxvoice` → `psint` `0305E3F0` and the audio through `030218B0`/`0301D624` (code-verified).

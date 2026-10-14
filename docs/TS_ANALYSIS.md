@@ -124,3 +124,15 @@ Not hardware-verified. The C7000 register map is not a 1:1 copy (32-bit register
   (no call on `3C624[3BEAA]`) and `03027334` (CC differs) feed the TX admit policy in `0301DE64`/`0301DF0C`/
   `0301DF8C` (policy 0 always, 1 channel free, 2 colour-code free; caller `0301F118`, `03020DC8`, `03020FE4`).
   A TS Match change must not modify `3BEAA`/`3BEAC`, `33CCB` or these functions.
+
+## 9. Corrections and follow-up (2026-10-14)
+
+- Decompiler fix 3 (`RX_CALL_PATH_ANALYSIS.md` §0.1): status bits **3:2** are one field. In §4 "sync class 1"
+  means bits 3:2 == 1 (BS-sourced) and "sync class 0" means bits 3:2 == 0 (MS-sourced); in §8 "status bit 2 is
+  0" means bits 3:2 == 0. Channel byte `+0x08` is passed as bits 7:4. The gates themselves are unchanged.
+- The "MS-sourced" gate (drop when `3C620[other]` or `3C622[other]` is set) is an existing single-slot capture
+  rule; `3C622` = data transfer active, `3C624` = terminator seen, `3C626` = embedded-CC mismatch counter.
+  There is no per-slot hang timer; the global burst-loss timer `3BEB8` resets everything after 13 ticks
+  (`RX_CALL_PATH_ANALYSIS.md` §2, with a TS Match off design note).
+- Menu link (code-verified): channel-menu id 6 `Time Slot` → setting 5 → `0301ECC0` + channel record byte
+  `+0x0D` bit 4; id 10 `Double Slot` → setting `'F'` → bit 5 (`RX_CALL_PATH_ANALYSIS.md` §6).

@@ -318,5 +318,9 @@ Recommended design for CC Match off (inferred, not implemented):
 
 ## 10. Not reviewed
 
+Update 2026-10-14: `03026E78`, `030260C4`, `0302695C`, `03029674`, `03024908`, the `0x44`/SAP-3 formats, the
+event `0x8000000` consumer (TX admit `0301DF8C`), the area 7 record layout, `0305F2F4` (partly) and the `0x27`
+request gating are now covered in `RX_CALL_PATH_ANALYSIS.md` §1.4 and §7. Original list:
+
 `03026E78`, `030260C4`, `0302695C`, `03029674`, `03024908` internals; `0x44` and SAP-3 payload formats; the event
 `0x8000000` consumer; flash layout of area 7 records; `0305F2F4` revive details; `0x27` request semantics.
