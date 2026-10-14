@@ -332,7 +332,7 @@ byte 1 = length) followed by the data at `+0x0D`. Slot → location by `03052FBC
 first block at `0x130 + 0x110·(k−1)`, others in another block. Data from `0305D764`: 3-byte source ID (LE),
 text converted from UTF-16 (`0301104C` for non-ASCII), terminating 0.
 
-### 7.9 Enable / "revive" `0305F2F4` (partly resolved)
+### 7.9 Enable / "revive" `0305F2F4` (resolved as restart, strong inference — `SETTINGS_CPS_ANALYSIS.md` §5)
 
 `0305EB8C` type 4: if stunned (`0305DF8C`), `0305DFA4(0xA0)` writes `A0, <0304C434(6)>, 3E1B4 (16 bit)` to
 area 4 offset `0xF00`, then `0305F2F4`. Boot (`0305DF4C`) treats `0xA5`/`0xA6` as stunned and anything else as
@@ -357,7 +357,7 @@ The RAM stun flags are not cleared on this path, which supports the restart read
 Own DMR ID: `0301E798(*3F018)` from the channel's DMR-ID index (channel byte `+0x1B` via `03057654`) at
 `0304CF6A`, `0305034E`, `03057704`, `03058412`. Configured CC: channel byte `+0x0D` bits 3:0 via `0301E7BC`.
 
-### 8.2 Setting id → block-4 offset map in `0304B158` (code-verified writes; labels mostly unreviewed)
+### 8.2 Setting id → block-4 offset map in `0304B158` (code-verified writes; menu labels in `SETTINGS_CPS_ANALYSIS.md` §1)
 
 | Id | Offset / target | Id | Offset / target |
 |---|---|---|---|
@@ -378,7 +378,7 @@ Own DMR ID: `0301E798(*3F018)` from the channel's DMR-ID index (channel byte `+0
 No setting id writes `3E341` bit 1 (Monitor) or `3BA6C` bit 3: Monitor state is not persisted (consistent with
 `MONITOR_ANALYSIS.md` §5).
 
-### 8.3 CPS protocol (partial, code-verified names only)
+### 8.3 CPS protocol (framing completed in `SETTINGS_CPS_ANALYSIS.md` §3)
 
 USB task `03029FB0` (created by `03029F44`, name `"task usb"`). Command words at `030B08AC`:
 `PROGRAM`, `PON-PIC`, `PSEARCH` (answer `DP570UV`), `PASSSTA`, `PASWORD`, `PCTESTM`, `RTCITEM`, `DEL-RCD`,
@@ -415,3 +415,12 @@ radio from an agent.**
 (`0302123C`, `00015FA4`); vocoder functions `00015F30`…`000160C0`; RF chip identity (register `0x47`);
 `0305F2F4` hardware meaning; area 8/9 roles; full CPS framing; labels of most setting ids in §8.2; the
 `0x4000` event (status bit 17 embedded data) and `3C628` (embedded LC qualifier) semantics.
+
+## 12. Second pass (2026-10-14, unattended)
+
+Closed from §11 in `SETTINGS_CPS_ANALYSIS.md`: `030297A4` (queues a Terminator with LC), `03023EB8`/`03023C10`
+(rest-channel follow and retune), `0305F2F4` (system restart, strong inference), message areas 8/9 (OutBox,
+DraftBox), status bit 17 / event `0x4000` (embedded privacy parameters, inferred), RF chip (BK4819 register map,
+strong inference; analog Monitor = AF type 1, AM airband = AF type 7), CPS framing, labels for most setting ids,
+and free storage bits for future TS/CC Match options (block 4 `0x60` bits 2–7, `3BA6D` bits 5–7).
+Still open: recording/vocoder internals, `03029C78`/`3C7A4`, `03023D24`, the CPS handshake handlers, `Digit Monitor`.
