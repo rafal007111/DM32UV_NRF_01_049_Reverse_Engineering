@@ -113,7 +113,7 @@ places for persistent "TS Match" / "CC Match" flags, mirroring how settings 9/10
 `0x60` unchanged when it writes a codeplug; CPS writes raw 4 KiB sectors (§3), so a CPS that writes 0 there
 would silently reset the options but would not break anything else.
 
-## 3. CPS USB protocol (task `usb` `03029FB0`, code-verified)
+## 3. CPS USB protocol (frame loop `03029FB0`/`0302A448`, task `usb` entry `0302B340`; code-verified)
 
 Entry handshake words at `030B08AC` (`PROGRAM`, `PON-PIC`, `PSEARCH` → answer `DP570UV`, `PASSSTA`,
 `PASWORD`, `PCTESTM`, `RTCITEM`, `DEL-RCD`, `IDCHECK`, `SYSINFO`) with handlers at `030B0860`; password check in
@@ -121,7 +121,7 @@ Entry handshake words at `030B08AC` (`PROGRAM`, `PON-PIC`, `PSEARCH` → answer 
 
 | Frame (host → radio) | Meaning | Radio action / answer |
 |---|---|---|
-| `FF FF FF FF x` | end of session | task returns |
+| `FF FF FF FF x` | end of session | frame loop returns (after `PROGRAM`: restart) |
 | `FF FF hh ll x` | address `0xFF000 | hh<<8 | ll` is computed, one more byte is read, then the command byte (`FF`) matches neither `S` nor `G` and the task returns | code-verified path `0302A432`; purpose unclear |
 | `56 a1 a2 a3 n` (`'V'`) | info item `n ≤ 0x40`, address must be 0 except `n = 0x0D` | `56 n len data…`: 1 `DM32.NRF.01.049`, 2 12-byte value from `0305FB7C` + xor/or mix, 3 `2022_06_27`, 4 `D1 01.01.004`, 5 `R1 00.01.001`, 11 `C1 00.01.001`, 6–10/14/15 two words each from `030AEAB0..030AEAE8` (inferred band limits), 13 copies `a3` bytes from base `*030AEAF4` + `a1a2` (memory read window), 16 `50 C3 00` (50000) |
 | `43 a1 a2 a3 n` + `n` bytes (`'C'`) | write `n` bytes | `03010DB8(0x10C, buf, n)`, answer `06` |
@@ -131,6 +131,28 @@ Entry handshake words at `030B08AC` (`PROGRAM`, `PON-PIC`, `PSEARCH` → answer 
 Address composition is code-verified at `0302A036..0302A044` (`a1<<12 | a2<<8 | a3`; `a2` is presumably
 < `0x10`). Writes go straight to SPI flash sectors: CPS overwrites whole codeplug sectors, which is why a firmware
 option stored in a codeplug byte depends on CPS preserving it (§2). **Never exercise this from an agent.**
+
+### 3.1 Handshake layer (task loop `0302B340`, created via the pointer at `0302A104`; code-verified)
+
+The loop reads 7-byte words with a 500 ms timeout. While a session flag (`3FDD8` bit 6) is set, a timeout calls
+`03029F80` (clears UI timers) and `0305F2F4` (restart). Recognised words (only when exactly 7 bytes arrived):
+
+| Word | Radio action | Answer |
+|---|---|---|
+| `PROGRAM` / `PON-PIC` | sets session flags (`3FDD8` bit 6, `3FDDC` bit 3), clears `40110` bit 0, stops RF/audio (`0002B634`, `0301E4D0(0)`, `0002B364`, `0002C83C`), runs `0302A448`, then **restart** `0305F2F4` | `0302A448`: `06`, waits for `02`, answers 8 × `FF`, waits for `06`, answers `06`, then the same `V`/`C`/`S`/`G` frame loop as §3 |
+| `PSEARCH` | session flags | `06 "DP570UV"` (8 bytes; model identifier) |
+| `PASSSTA` | session flags; reads block 4 `0x439` (2 bytes) | `50 xx yy` (password status, inferred) |
+| `PASWORD` | `06`, then `0302B224` (10-byte `P`,`W`/`R`, 8-byte password vs block 4 `0x43B`/`0x443`) | `06` / `15` |
+| `PCTESTM` | `06`, then `0302AA58` (test-mode state reset, clears `3BE68`…) | `06` |
+| `RTCITEM` | `06`, then `0302A9A8` (RTC item, unreviewed) | `06` |
+| `DEL-RCD` | `06`, `03010B40` erases the recording sector range `3FFEC..3FFF4` and `3FFE0..3FFF8`, writes `0xA5` markers, then **restart** | `06` |
+| `IDCHECK` | session flags | `06` |
+| `SYSINFO` | session flags, `06`, then **`03029FB0`** (frame loop without the `02`/`FF` exchange and without a restart at the end) | per frame |
+| anything else | `03029F80`; restart if a session was open | — |
+
+So a CPS **write** session is `PROGRAM` (… frames …) and always ends in a restart, while `SYSINFO` gives the same
+read/write frame access without restarting. `DEL-RCD` and `PROGRAM` are the only words that erase or rewrite
+flash besides the `S`/`C` frames. Read-only documentation; never send these from an agent.
 
 ## 4. RF transceiver identity (strong inference)
 

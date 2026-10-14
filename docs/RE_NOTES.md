@@ -73,3 +73,7 @@ Same inputs/tools as the entry above; static only. code-verified: Radio Settings
 
 No image built. [MATCH_OPTIONS_DESIGN.md](MATCH_OPTIONS_DESIGN.md) lists the four Monitor-style CC gates (same `andi r,r,8` idiom on `3BA6C`), the embedded-CC counter and the four BS slot gates with stock bytes (identical in the installed image), proposed flag bits (`3BA6D` bits 5/6, block 4 `0x60` bits 2/3), and a placement constraint: the Scan Zone window ends exactly at the official payload end `030E14EC`, leaving 1686 zero bytes; space beyond lies outside the updater payload and is unreviewed. All inferred.
 
+### CPS handshake and TS-off receive consumers (2026-10-14, third pass)
+
+code-verified: task `usb` entry is `0302B340` (not `03029FB0`); `PROGRAM` runs the `02`/8×`FF`/`06` exchange and the frame loop (`0302A448`) and always restarts, `SYSINFO` opens the same frame loop without restart, `DEL-RCD` erases recording sectors and restarts ([SETTINGS_CPS_ANALYSIS.md](SETTINGS_CPS_ANALYSIS.md) §3.1). For TS Match off, `rxvoice` indexes the call descriptor and PI header by the TX slot `3BEAA` at `03020714`/`030207AA`/`030208FA`, and the `03028644` slot gate precedes the data-type table, so a bypass must be limited to voice bursts; `3BEBD..3BECB` appears unreferenced (inferred) ([MATCH_OPTIONS_DESIGN.md](MATCH_OPTIONS_DESIGN.md) §3.3–3.4).
+

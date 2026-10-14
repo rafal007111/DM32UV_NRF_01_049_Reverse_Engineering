@@ -20,7 +20,7 @@ The current Ghidra export has 2,171 function boundaries: 1,958 marked ok and 213
 | Analog Monitor/squelch | 0301742C, 03060398, 030603DC, 0300E2C0, 0300E360, 03060A74 | Monitor forces audio open and blocks squelch-close muting. Code-verified mechanism, register meanings inferred; §5. |
 | Channel menu/codeplug | 0304DDB0, 0304B158, 03056FFC, 030571CC, 03056680, 03055CCC, 0304B010 | Menu id → setting id → channel record byte +0x0D / block-4 offsets. Code-verified; §6, §8. |
 | Data internals | 03026E78, 030260C4, 03025B28, 0302695C, 03026600, 03029674, 03024908, 03053D74, 0305D764, 0305DA8C | Reply/segmentation/retransmission, own call start, DCDM timing, Inbox records, 0x27 gating. Code-verified structure; protocol names inferred; §7. |
-| Settings menus/CPS/RF | 0304FBDC, 0304CCA0, 0305D8C0, 0304A45C, 03029FB0, 0302B224, 0002C2F8, 0002C340, 0002B56C, 0300D84C, 0305F2F4, 030297A4, 03023EB8, 03023C10, 0305407C | Menu item → setting id → block-4 storage; CPS frames; BK4819-style register map (inferred); restart; rest-channel follow. See docs/SETTINGS_CPS_ANALYSIS.md. |
+| Settings menus/CPS/RF | 0304FBDC, 0304CCA0, 0305D8C0, 0304A45C, 0302B340 (task usb), 03029FB0, 0302A448, 0302B224, 0002C2F8, 0002C340, 0002B56C, 0300D84C, 0305F2F4, 030297A4, 03023EB8, 03023C10, 0305407C | Menu item → setting id → block-4 storage; CPS frames; BK4819-style register map (inferred); restart; rest-channel follow. See docs/SETTINGS_CPS_ANALYSIS.md. |
 
 Supporting Ghidra outputs are in analysis/reference. Targeted menu work is in analysis/ghidra_scripts and the earlier workspace's integration_review/menu_flow artifacts. The current source modules are in firmware/source.
 

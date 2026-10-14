@@ -65,6 +65,35 @@ Additional TS-off concerns (must be designed before an image):
   the other slot must not write them (TX slot unchanged).
 - Mode 1 slot lock (`3BEB1`) and CACH tracking already see both slots; no change.
 
+### 3.3 Burst-type restriction for TS off (code-verified register use, design inferred)
+
+The slot gate in `03028644` runs **before** the data-type jump table, so removing it would also admit CSBKs,
+data headers/blocks and PI headers from the other slot (TX side effects, `DATA_PATH_ANALYSIS.md` §6). At the gate
+the decoded status is still in registers (`0302864A..03028662`): `r1` = bits 1:0 (sync class: 1 voice sync,
+2 data sync, 0 embedded/no sync), `r0` = bits 11:8 (data type), `r12` = bits 3:2 (sync source), `r5` = bits 7:4
+(CC). `ts_gate` should therefore admit the other slot only for `r1 == 1` (voice sync burst) and for `r1 == 2`
+with `r0 ∈ {1, 2}` (voice LC header, terminator with LC). In `03028BE4` (embedded LC/late entry) `r4` holds
+bits 3:2; only voice-related LC arrives there, but FLCO `0x30` data terminators and FID `0x10` services
+(`3C7A4`) must stay on the programmed slot.
+
+### 3.4 Receive consumers indexed by the TX slot `3BEAA` (code-verified)
+
+| Site | Code | Stock bytes | Use |
+|---|---|---|---|
+| `03020714` (`rxvoice`, every event) | `ld.b r3,(r8,0x2)` | `68 d8 02 00` | copies dst/src `3C62C/3C634[slot]` to `3BA60/3BA64` |
+| `030207AA` (`rxvoice`, event 2) | `ld.b r2,(r8,0x2)` | `48 d8 02 00` | call descriptor `3BD48` dst/src |
+| `030208FA` (`rxvoice`, event 1 PI header) | `ld.b r2,(r8,0x2)` | `48 d8 02 00` | PI header `3C684+12·slot` → decryption key match |
+| `03020A22` (`rxcsbk`) | `ld.b r3,(r2,0x2)` | `62 82` | CSBK requester/target (CSBKs stay slot-gated, leave) |
+
+In stock firmware the slot of an accepted voice header always equals `3BEAA` (mode 1: only the programmed slot
+passes the gate and `0002D500` sets `3BEAA = 33CC8[4]` at slot lock; mode 0: `030282A4`/`03028BE4` copy the burst
+slot into `3BEAA` for MS-sourced bursts). With TS off a captured call on the other slot breaks that equality, so
+the three `rxvoice` loads must read a **captured-slot byte** instead. Candidate RAM: `3BEBD..3BECB` (15 bytes inside
+the `3BEA8` block) has no literal-pool, constant-offset or memset reference (scan of flash + IRAM, inferred free;
+BSS-zeroed at boot is unverified). Writing the burst slot there in the accept paths of `030282A4`/`03028BE4`
+keeps stock behaviour when TS Match is on, because the value then equals `3BEAA`. The 32-bit `ld.b` form allows any
+offset, so each `rxvoice` site is a guarded 4-byte change (`02 00` → `15 00` for offset `0x15`).
+
 ## 4. Code and RAM placement (constraints found)
 
 - The installed Scan Zone module occupies `030DFCEC..030E0E56` inside a `0x1800` window ending at `030E14EC`.

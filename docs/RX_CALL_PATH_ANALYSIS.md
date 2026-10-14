@@ -380,7 +380,7 @@ No setting id writes `3E341` bit 1 (Monitor) or `3BA6C` bit 3: Monitor state is 
 
 ### 8.3 CPS protocol (framing completed in `SETTINGS_CPS_ANALYSIS.md` §3)
 
-USB task `03029FB0` (created by `03029F44`, name `"task usb"`). Command words at `030B08AC`:
+USB frame loop `03029FB0` (task `"task usb"` created by `03029F44` has entry `0302B340`; correction in `SETTINGS_CPS_ANALYSIS.md` §3.1). Command words at `030B08AC`:
 `PROGRAM`, `PON-PIC`, `PSEARCH` (answer `DP570UV`), `PASSSTA`, `PASWORD`, `PCTESTM`, `RTCITEM`, `DEL-RCD`,
 `IDCHECK`, `SYSINFO`; handler pointers at `030B0860`. Inside the session: `'V'` version items (1 =
 `DM32.NRF.01.049`, 3 = `2022_06_27`, 4/5/11 = `D1 01.01.004`/`R1 00.01.001`/`C1 00.01.001`, 6–10/14 = pairs of
