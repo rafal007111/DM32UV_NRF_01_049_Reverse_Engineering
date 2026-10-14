@@ -44,6 +44,7 @@ The prebuilt `C-SKY.jar` from the zip was not committed or installed; its source
 ### Static helpers (2026-10-14)
 
 `tools/static/objdump_image.sh` wraps the flash and IRAM regions in ELF files so binutils decodes 32-bit C-SKY instructions (`-b binary` prints `.long`). `tools/static/resolve_ptr_literals.py` replaces `PTR_DAT_x` names in an `ExportDM32.java` export with the literal values; `tools/static/decomp_grep.py` greps the export with the owning function. All are read-only; run Python helpers with `-I`.
+
 ## dm32re analysis CLI (2026-10-14)
 
 `python3 tools/dm32 …` provides annotated listings, callers/callees/call trees, RAM/MMIO access search, string

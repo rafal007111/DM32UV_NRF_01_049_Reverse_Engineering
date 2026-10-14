@@ -136,3 +136,12 @@ Not hardware-verified. The C7000 register map is not a 1:1 copy (32-bit register
   (`RX_CALL_PATH_ANALYSIS.md` §2, with a TS Match off design note).
 - Menu link (code-verified): channel-menu id 6 `Time Slot` → setting 5 → `0301ECC0` + channel record byte
   `+0x0D` bit 4; id 10 `Double Slot` → setting `'F'` → bit 5 (`RX_CALL_PATH_ANALYSIS.md` §6).
+
+## 10. Datasheet result (2026-10-14, fifth pass)
+
+`docs/HR_C7000_CROSSCHECK.md` §3.2 replaces the OpenGD77 analogy of §7 with datasheet + code evidence: `WORK_MODE`
+(`0x100`) bit 0 is `work_slot_sel`; the radio enables reception for every slot it does not transmit in
+(`0002D7C8` → `LAYER2_TXRX_CTRL.rxnextsloten`), the chip reports `current_rx_slot` (status bit 19) and keeps one
+voice buffer per slot (receive RAM `0x36`/`0x66`), and software opens voice delivery per slot
+(`03023828` → `begin_v_layer2` from `3C620[slot]`). **No hardware slot filter is used**; TS Match off is a software
+change. Status bits 3:2 are the datasheet's sync pattern type (00 MS, 01 BS, 10 TDMA1, 11 TDMA2).

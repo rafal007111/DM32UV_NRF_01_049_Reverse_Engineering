@@ -126,6 +126,23 @@ TS Match off does not change it (a carrier is present either way). In mode 1 onl
 touched by an other-slot capture (§3.5). CC Match off does not change `3C61A` handling (the dispatcher stores
 the received CC before any gate in stock firmware), so policy 2 keeps its stock meaning.
 
+### 3.7 Hardware CC layer (correction 2026-10-14, fifth pass)
+
+§3.1 lists only software sites. The HR_C7000 datasheet (`HR_C7000_CROSSCHECK.md` §3.1) documents a hardware CC
+filter: with `LOCAL_CC.cc_opt` (`11000384` bits 9:8) = 0, frames whose CC differs from `11000384` bits 3:0 are not
+decoded at all. CC Match off therefore also needs `cc_opt = 1` on normal channels, as `CC_MATCH_DESIGN.md` §2
+proposes. The two writers that clear bits 9:8 are code-verified:
+
+| Site | Stock bytes (image order) | Instruction | Role |
+|---|---|---|---|
+| `0301E73C` (`0301E580`, non-mode-4 path) | `6e 11 78 83 63 e4 08 20 cc 74 03 e9 07 00` at `0301E73C..0301E749` (`lrw r3,3BA54; ld.b r3,(r3,0x18); andi r3,r3,8; zextb r3; bez`) | Monitor test before `bseti r4, 8` at `0301E750` | re-applies `cc_opt` on every channel/mode setup |
+| `0301EC40` (Monitor setter) | see `MONITOR_ANALYSIS.md` §3 | clears 9:8, sets bit 8 when `on` | Monitor off would clear `cc_opt` |
+
+The `0301E73C` site uses the same Monitor idiom as the four voice sites, so the same `cc_bypass` cave
+(§3.1) can serve it; `0301EC40(0)` would additionally have to keep bit 8 when CC Match off is set. Mode 4 already
+forces bit 8. `RF_MODE.adjustsyncmax` is not written by stock firmware even when `cc_opt = 1`; leave it unchanged
+unless an owner test (`HR_C7000_CROSSCHECK.md` §5) shows a problem.
+
 ## 4. Code and RAM placement (constraints found)
 
 - The installed Scan Zone module occupies `030DFCEC..030E0E56` inside a `0x1800` window ending at `030E14EC`.

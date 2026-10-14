@@ -88,3 +88,11 @@ code-verified from the channel loader `03057790`: channel record bytes `+0x08` (
 2026-10-14 channel record vs qdmr: `3E1F8` is the current-channel copy of codeplug record body bytes `0x10–0x2F` (BCD frequencies converted) plus the name at `+0x20`; addressing in `03055CCC` matches qdmr exactly (block `0x12`, 84 + 85-per-block records of `0x30`). `0x1D` bit 5 is qdmr's DCDM (Double Slot). qdmr disagrees on the scan-list field (6:2 vs firmware 5:0). Details: [CHANNEL_RECORD.md](CHANNEL_RECORD.md). No hardware test.
 
 2026-10-14 CC Match design ([CC_MATCH_DESIGN.md](CC_MATCH_DESIGN.md)): foreign-CC voice needs `cc_opt=1` (`11000384` bit 8, writers `0301E580`/`0301EC40`) plus the voice-site bypass; all CSBK processing is guarded by a CC equality test. Proposed storage: block 4 `0x60` bits 2/3 (0 = stock). Safety: CPS decode flags (block 4 `0x65`) are ignored on Rx Only channels for Disable/Enable/Call Alert (code-verified, not hardware-verified).
+
+### HR_C7000 register cross-check (2026-10-14, fifth pass)
+
+Datasheet `HR_C7000 Document 2.pdf` (`d60f652e…`) against the stock image (`de7dbcbc…`; installed `156a4872…` and GZF `354f9324…` hash-checked), Ghidra 12.1.4 + CSKY v0.2 + sinc fix 3, binutils 2.42, `tools/dm32`. Static only.
+- datasheet + code: a **hardware CC filter exists** (`LOCAL_CC.cc_opt`, `11000384` bits 9:8); Monitor and RX mode 4 set "any CC". CC Match off needs `cc_opt = 1` plus the voice-site bypasses. The firmware never clears `RF_MODE.adjustsyncmax` (bit 12) although the datasheet asks for it with `cc_opt = 1` (open question).
+- datasheet + code: **no hardware slot filter** is used — reception is enabled for every slot (`0002D7C8` → `rxnextsloten`), voice delivery is opened per slot from `3C620` (`03023828` → `begin_v_layer2`), and the chip keeps one voice buffer per slot (selected by status bit 19).
+- datasheet + code: the ISR `0002C458` drains `SYS_INTERP_LIST`; `03028644` = frame-received, `03028BE4` = late-entry, `03027388` = CACH short-LC handler. Mode 4 = DCDM (TDMA1/2 sync + dual PHY). `0305F2F4` = CPU/system soft reset. `11000394` = `RX_INFO.rc_info` (burst-F KeyID/algorithm).
+- Details, page references, open questions and RX-only tests: [HR_C7000_CROSSCHECK.md](HR_C7000_CROSSCHECK.md); hardware-CC design correction in [MATCH_OPTIONS_DESIGN.md](MATCH_OPTIONS_DESIGN.md) §3.7.

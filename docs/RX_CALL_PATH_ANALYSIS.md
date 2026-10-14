@@ -435,3 +435,13 @@ Still open: recording/vocoder internals, `03029C78`/`3C7A4`, `03023D24`, the CPS
 | `3C7A4` arming | `3C7A4 = 3C6F0+0xB4`; no literal, constant-offset store or block copy writes it anywhere in flash/IRAM (scans of all functions plus the uncatalogued tasks `txmsg`, `rxmsg`, `sysint`, `SlotTimer`, `rxslot`, `CclTraffic`) → the direct-TX path looks **dormant** in this build | inferred (absence) |
 | TS-off design | receive consumers indexed by `3BEAA`, voice-only bypass and TX-admission interaction added to `MATCH_OPTIONS_DESIGN.md` §3.3–3.5 | code-verified sites; design inferred |
 
+
+## 14. Fifth pass (2026-10-14, datasheet cross-check)
+
+[HR_C7000_CROSSCHECK.md](HR_C7000_CROSSCHECK.md): the ISR `0002C458` drains `SYS_INTERP_LIST` (`0x398`) into
+`3BEA0`, so the dispatcher bits are datasheet interrupts — bit 3 `dll_frame_rx_interp` → `03028644`, bit 2
+`dll_latelc_rx_interp` → `03028BE4`, bit 4 `dll_shortlc_rx_interp` → `03027388`, bit 1 `dll_rdy_interp_rx` →
+`0002D6C0`, bit 6 RX slot abnormal → `03023880`. Mode 4 is datasheet-confirmed DCDM (TDMA1/TDMA2 sync detection
+and `use_dual_phy`). `0305F2F4` (§7.9) asserts the CPU and system soft reset (`SYS_SOFT_RSTN` bits 8/7):
+datasheet + code. Status bit 17 is the EMB PI flag; `11000394` is `RX_INFO.rc_info`, whose 11 bits carry the
+burst-F KeyID/algorithm used by `03027628`.

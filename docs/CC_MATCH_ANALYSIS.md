@@ -32,3 +32,9 @@ private-call filter in `0302768C`. A CC-only option therefore needs its own flag
 (`docs/TS_ANALYSIS.md` §5).
 
 2026-10-14: hardware `cc_opt` (`11000384` bits 9:8) and the full design are in [CC_MATCH_DESIGN.md](CC_MATCH_DESIGN.md).
+
+2026-10-14 (fifth pass): the HR_C7000 datasheet documents a **hardware CC filter** (`LOCAL_CC.cc_opt`, `11000384`
+bits 9:8). Stock firmware enables "any CC" only for Monitor and RX mode 4 (DCDM). CC Match off therefore needs
+`cc_opt = 1` plus the voice-site bypasses; details and the `RF_MODE.adjustsyncmax` caveat in
+[HR_C7000_CROSSCHECK.md](HR_C7000_CROSSCHECK.md) §3.1. The completeness check of the voice CC sites is in
+[MATCH_OPTIONS_DESIGN.md](MATCH_OPTIONS_DESIGN.md) §3.7.

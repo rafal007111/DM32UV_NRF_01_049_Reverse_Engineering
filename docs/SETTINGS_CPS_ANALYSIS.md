@@ -221,3 +221,9 @@ only): `0x38`/`0x39` 32-bit frequency in 10 Hz units (`0002B56C`; `0300D84C` com
 Exact bit for Ana Roger; Display colour storage offsets beyond CallSign Color; `03065F58` FM radio;
 `0300DE8C` squelch level; `03029C78` and the `3C7A4` service list; `03023D24`; CPS handshake handlers at
 `030B0860`; `Digit Monitor` softkey use.
+
+## 8. Datasheet labels (2026-10-14, fifth pass)
+
+§5 `0305F2F4`: `11000000` is `SYS_SOFT_RSTN` (bits 8/7 = CPU/system soft reset, active low) and `1100005C` is
+`QUAD_ENABLE` (SPI flash four-wire mode) — restart is now datasheet + code ([HR_C7000_CROSSCHECK.md](HR_C7000_CROSSCHECK.md)).
+§5 status bit 17: the datasheet names it the received EMB **PI** flag (privacy indicator).

@@ -117,3 +117,13 @@ non-sync voice bursts whose embedded CC differs from `33CCD` in `3C626[slot]` an
 should still play (inferred). If the owner's wrong-CC Monitor test gives choppy audio or calls that drop after
 about half a second, this counter is the first suspect. The received call reaches the UI through event 2 →
 task `rxvoice` → `psint` `0305E3F0` and the audio through `030218B0`/`0301D624` (code-verified).
+
+## 9. Datasheet cross-check (2026-10-14, fifth pass)
+
+`docs/HR_C7000_CROSSCHECK.md`: `11000384` bits 9:8 are `LOCAL_CC.cc_opt` (datasheet p. 301). Bit 8 set = `cc_opt = 1`,
+"decode frames with any correctly received CC"; with `cc_opt = 0` the chip decodes only frames whose CC equals the
+local CC. The "accept any Colour Code" reading of §3 is therefore **datasheet + code** (not hardware-verified).
+The firmware does not clear `RF_MODE` (`11000104`) bit 12 `adjustsyncmax`, which the datasheet requires when
+`cc_opt = 1` (open question in that file, §5). The user manual (§5.10 and the icon table in §4.3) lists a Monitor
+status icon; the search in §2 found no reader of `3E341` bit 1 for display, so the icon source is still open
+(it may be drawn from another state; unreviewed).
