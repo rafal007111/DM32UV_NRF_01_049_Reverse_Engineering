@@ -424,3 +424,14 @@ DraftBox), status bit 17 / event `0x4000` (embedded privacy parameters, inferred
 strong inference; analog Monitor = AF type 1, AM airband = AF type 7), CPS framing, labels for most setting ids,
 and free storage bits for future TS/CC Match options (block 4 `0x60` bits 2–7, `3BA6D` bits 5–7).
 Still open: recording/vocoder internals, `03029C78`/`3C7A4`, `03023D24`, the CPS handshake handlers, `Digit Monitor`.
+
+## 13. Third pass (2026-10-14, unattended)
+
+| Item | Finding | Confidence |
+|---|---|---|
+| Task chain | `sysint` (IRAM `0002D770`) loops on `0300C850(0)` and calls the burst dispatcher `030239D4` while `33CC8[0] == 0` (digital); `rxslot` `0302386C` and `SlotTimer` `030293C8` only count/toggle (`31294`, `3C6E8`) | code-verified |
+| `3F720` / `3F722` | voice-privacy context: byte 0 algorithm (1 → `00014698` key schedule with a 9-byte key and `000147AC(…,0x7E)`, ARC4-like; 2 → `0001D4B8`/`0001D4C4`, AES-like; 4 → `0001CFAC`), byte 1 key id; `3F722` = decrypt active, set by the PI-header match in `rxvoice` and by `03027628`, cleared by `03029318`/`030234E8`; `03028644` then runs `0002B300`/`0002B30C` over each voice burst. Not recording (correction to `TS_ANALYSIS.md` §8) | code-verified flow; algorithm names inferred |
+| `03029C78` | builds a CSBK (byte 0 `0x9E` = last block + opcode `0x1E`, FID from entry `+2`, IDs from `+4..+11`) and writes it **directly** to the baseband (`0300D3EC`, `11000418`), bypassing the TX queue; called from `03028644` (burst 4) and `03028BE4` when `3C7A4[12·slot]` is non-zero and the LC service bits 5:4 are `0x30` | code-verified |
+| `3C7A4` arming | `3C7A4 = 3C6F0+0xB4`; no literal, constant-offset store or block copy writes it anywhere in flash/IRAM (scans of all functions plus the uncatalogued tasks `txmsg`, `rxmsg`, `sysint`, `SlotTimer`, `rxslot`, `CclTraffic`) → the direct-TX path looks **dormant** in this build | inferred (absence) |
+| TS-off design | receive consumers indexed by `3BEAA`, voice-only bypass and TX-admission interaction added to `MATCH_OPTIONS_DESIGN.md` §3.3–3.5 | code-verified sites; design inferred |
+

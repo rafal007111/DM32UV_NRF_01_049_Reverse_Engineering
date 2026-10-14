@@ -116,7 +116,7 @@ Not hardware-verified. The C7000 register map is not a 1:1 copy (32-bit register
   current slot follows the received call (code-verified copy; TX consequence inferred).
 - Voice bursts (sync class 1) in `03028644` are read from the baseband (`0300D41C` with buffer selectors
   `0x36/0x66/0x39/0x69`) into **one shared ping-pong buffer** at `3C69C` (`3C614+0x88`, index `3C6D2`) for any
-  slot whose `3C620[slot]` is set. Recording (`3F722`) copies from the same buffer.
+  slot whose `3C620[slot]` is set. Recording (`3F722`) copies from the same buffer. *Correction 2026-10-14:* `3F722` (`3F720+2`) is the voice-privacy "decrypt active" flag set by the PI-header key match in `rxvoice` and by `03027628`; `0002B300`/`0002B30C` process the frames in place for decryption, not recording (`RX_CALL_PATH_ANALYSIS.md` §13).
 - Consequence: with the slot gates removed, two simultaneous calls would interleave in the same voice buffer.
   A TS Match off implementation must keep one captured slot: accept the first voice header, ignore the other
   slot until terminator or timeout. OpenGD77 uses exactly this capture model.
