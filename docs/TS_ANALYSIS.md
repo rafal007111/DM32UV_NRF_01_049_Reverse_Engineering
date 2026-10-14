@@ -84,3 +84,43 @@ Monitor overrides both. This is the natural place for TS Match and CC Match menu
 - Risk: `0002D6C0` uses the other slot's AT bit for TX permission; changing RX slot selection must not alter it.
 - Before any patch: confirm whether `11000100` bit 0 gates slots in hardware (e.g. trace all readers/writers and
   the HR-C7000 register meaning), because a hardware filter would make the software change ineffective.
+
+## 7. Is `11000100` a hardware slot filter? (step 1, 2026-10-14)
+
+All accesses (full-program decompiler search): written by `030215C8` (`0x13` mode-4 init, `2`, `0x80`, `0x22`),
+`03023574` (`0x6E` at DMR init), `0301E580` (`&0x7E|4` for slot 1 → `0x6E`, `&~0x80|5` for slot 2 → `0x6F`,
+`|0x80` analog), `0301ECC0` (bit 0 = slot), `03061D50` (bit 7), and saved/restored by IRAM `000169D8`/`00016AD0`.
+No receive routine reads it.
+
+External comparison (design reference only, no code copied): OpenGD77 (`open-ham/OpenGD77` commit `b843c1f`,
+GPL-2.0) drives the related HR-C6000. Its register `0x10` is initialised to `0x6E` with the comment
+"DMR, Tier2, Timeslot mode, Layer2, Repeater, Aligned, Slot 1". OpenGD77 receives both slots with that value and
+implements its TS filter purely in software: CACH TC from register `0x52` bit 2, received CC from `0x52`
+bits 7:4, and a "captured slot" with a timeout when the TS filter is off.
+
+The DM32 values (`0x6E`/`0x6F` per slot, `0x80` analog) and the software TC tracking plus software slot gates
+match that model. **Inferred (strong):** `11000100` is the HR-C7000 counterpart of HR-C6000 register `0x10`; bit 0
+selects the radio's own (TX/timing) slot and does not stop the other slot's bursts from reaching software.
+Not hardware-verified. The C7000 register map is not a 1:1 copy (32-bit registers; e.g. sync patterns at
+`11000350`… are packed 16-bit pairs of the C6000 byte table).
+
+## 8. Call arbitration and audio (step 2)
+
+- Per-slot voice call state `3C620[slot]` (`3C614+0xC+slot`): set to 1 by the voice LC header handler
+  `030282A4` and by the late-entry path in `03028BE4`; cleared by the terminator handler `03028180`, `030297A4`
+  and `030234E8` (slot 0). `3C622[slot]` and `3C626[slot]` are further per-slot counters/flags (unreviewed).
+- `030282A4` stores the accepted call's LC per slot (`3C614+0x2A+12*slot`…), destination at `3C62C+4*slot`,
+  source at `3C634+4*slot`, then posts event `2` via `0300C724` (consumer not traced).
+- In `030282A4`, when status bit 2 is 0 (direct/MS-sourced burst, inferred), the radio copies the received slot
+  into `3BEAA`/`3BEAC`. `3BEAA` is the slot that TX admission checks use (`03027320`), so in direct mode the
+  current slot follows the received call (code-verified copy; TX consequence inferred).
+- Voice bursts (sync class 1) in `03028644` are read from the baseband (`0300D41C` with buffer selectors
+  `0x36/0x66/0x39/0x69`) into **one shared ping-pong buffer** at `3C69C` (`3C614+0x88`, index `3C6D2`) for any
+  slot whose `3C620[slot]` is set. Recording (`3F722`) copies from the same buffer.
+- Consequence: with the slot gates removed, two simultaneous calls would interleave in the same voice buffer.
+  A TS Match off implementation must keep one captured slot: accept the first voice header, ignore the other
+  slot until terminator or timeout. OpenGD77 uses exactly this capture model.
+- TX constraints found: `030272EC` (channel busy: `3BEBB` other-slot busy or `3BEAB` RX activity), `03027320`
+  (no call on `3C624[3BEAA]`) and `03027334` (CC differs) feed the TX admit policy in `0301DE64`/`0301DF0C`/
+  `0301DF8C` (policy 0 always, 1 channel free, 2 colour-code free; caller `0301F118`, `03020DC8`, `03020FE4`).
+  A TS Match change must not modify `3BEAA`/`3BEAC`, `33CCB` or these functions.

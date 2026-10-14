@@ -1,0 +1,31 @@
+# Colour Code comparison sites — DM32.NRF.01.049 (step 3)
+
+Static analysis, 2026-10-14, same inputs as `docs/MONITOR_ANALYSIS.md`. Full-program decompiler search for
+reads of the configured CC (`33CCD`, `33CC8+5`) and received CC (`3C61A`, `3C614+6`, or status bits 7:4).
+No hardware test performed.
+
+| Site | Role | Compares | Monitor bypass | CC Match off should |
+|---|---|---|---|---|
+| `03028644` (data-sync gate before type table) | RX headers/data | status CC vs `33CCD` | yes | bypass |
+| `030282A4` | RX voice LC header | `3C61A` vs `33CCD` | yes | bypass |
+| `03028180` | RX terminator with LC | `3C61A` vs `33CCD` | yes | bypass |
+| `03028BE4` | RX voice / late entry | status CC vs `33CCD` | yes | bypass |
+| `03027584` | RX PI header | `3C61A` vs `33CCD` | no | bypass if encrypted-call headers should follow |
+| `03024E7C` | RX data header | `3C61A` vs `33CCD` | no | owner decision (data/SMS/GPS) |
+| `03025480` | RX packet data (types 7/8/10) | `3C61A` vs `33CCD` | no | owner decision |
+| `03027B9C` | RX CSBK | `33CCD` vs `3C61A` on some paths | no | owner decision (not fully traced) |
+| `03028644` (mode 4 slot gate) | RX mode 4 | CSBK with CC 15 exception | no | leave |
+| `03027334` | **TX admit** ("colour-code free" policy in `0301DE64`) | `33CCD` vs `3C61A`, mode-4 CC 15 rule | no | **leave unchanged** (TX behaviour) |
+
+Writers of the configured CC: `0301E7BC(cc)` (`33CCD` and `11000384` bits 3:0; callers `030572B8` channel CC
+setting, `03057790`), IRAM `0002D7C8` (`11000384` bits 3:0 from `33CCD`, and `|0xF` in one branch, unreviewed).
+
+Hardware: `11000384` bits 3:0 hold the configured CC and bit 8 is set by Monitor and forced in RX mode 4. By the
+HR-C6000 analogy (OpenGD77 register `0x1F` LocalEMB CC, `0x21` "polite to colour code") these are the C7000
+local CC/EMB fields; whether bit 8 relaxes a hardware CC check is inferred, not verified. Software alone decides
+acceptance at the sites above.
+
+Design note: the stock Monitor flag (`3BA6C` bit 3) covers the first four rows but also disables the talkgroup and
+private-call filter in `0302768C`. A CC-only option therefore needs its own flag tested at the RX rows above, with
+`03027334` (TX) excluded. The natural menu home is next to `PCall Match`/`GCall Match` in the Other menu
+(`docs/TS_ANALYSIS.md` §5).
