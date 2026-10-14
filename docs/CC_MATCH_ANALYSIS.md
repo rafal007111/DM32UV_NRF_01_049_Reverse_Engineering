@@ -13,7 +13,7 @@ No hardware test performed.
 | `03027584` | RX PI header | `3C61A` vs `33CCD` | no | bypass if encrypted-call headers should follow |
 | `03024E7C` | RX data header | `3C61A` vs `33CCD` | no | owner decision (data/SMS/GPS) |
 | `03025480` | RX packet data (types 7/8/10) | `3C61A` vs `33CCD` | no | owner decision |
-| `03027B9C` | RX CSBK | `33CCD` vs `3C61A` on some paths | no | owner decision (not fully traced) |
+| `03027B9C` | RX CSBK | `33CCD` vs `3C61A` guards **all** CSBK processing (2026-10-14; only mode-4 CC 15 path otherwise) | no | **keep** |
 | `03028644` (mode 4 slot gate) | RX mode 4 | CSBK with CC 15 exception | no | leave |
 | `03027334` | **TX admit** ("colour-code free" policy in `0301DE64`) | `33CCD` vs `3C61A`, mode-4 CC 15 rule | no | **leave unchanged** (TX behaviour) |
 
@@ -29,3 +29,5 @@ Design note: the stock Monitor flag (`3BA6C` bit 3) covers the first four rows b
 private-call filter in `0302768C`. A CC-only option therefore needs its own flag tested at the RX rows above, with
 `03027334` (TX) excluded. The natural menu home is next to `PCall Match`/`GCall Match` in the Other menu
 (`docs/TS_ANALYSIS.md` §5).
+
+2026-10-14: hardware `cc_opt` (`11000384` bits 9:8) and the full design are in [CC_MATCH_DESIGN.md](CC_MATCH_DESIGN.md).

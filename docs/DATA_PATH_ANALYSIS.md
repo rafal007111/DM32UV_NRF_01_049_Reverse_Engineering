@@ -311,7 +311,7 @@ Recommended design for CC Match off (inferred, not implemented):
 
 - Should received foreign-CC group texts be stored in the Inbox (flash) or only shown?
 - Is the `"WLT CMD "` GPS poll wanted at all (it answers any matching sender with the radio's position)?
-- CPS names of the decode bits in block 4 `0x65` and the H/M/D-SMS value mapping (needs a CPS check, RX-only).
+- ~~CPS names of the decode bits in block 4 `0x65`~~ resolved 2026-10-14 from NeonPlug/qdmr: bit 7 Remote Monitor Decode, 6 Radio Disable Decode, 5 Radio Check Decode, 4 Radio Enable Decode, 3 Call Alert Decode, 2:1 Data Service, 0 Missed Call Alert. **Rx Only channels execute Disable/Enable/Call Alert regardless of these flags** (CC_MATCH_DESIGN.md §5). H/M/D-SMS mapping still open.
 - Owner hardware checks, all receive-side and without patches: whether CPS shows "Radio Disable decode" etc.;
   with stock firmware, send a radio check from a second radio on the same CC to confirm the ACK path; do **not**
   test Disable on the only radio (stun is persistent until an Enable is received).
