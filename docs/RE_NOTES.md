@@ -112,3 +112,7 @@ Manual vs. firmware menus: Voice Func matches item for item; Display/Other Func 
 ### Remaining internals (2026-10-14, fifth pass)
 
 code-verified: `030562C4` loads the RX group list (channel `+0x0F`) to `33CF4..33D73`, the TX contact sits at `33D74` (labels in earlier docs were shifted by one entry, filter unchanged); channel `+0x08` bits 2:1 = TX power; `RTCITEM` sets the clock and restarts; `PCTESTM` is a factory test loop; the recording task `0302124C` takes caller IDs from the call descriptor `3BD48` and uses flash sectors `0x6DC..0xFFF`; privacy alg 1 = RC4 (KSA/PRGA structure), 4/5 = AES-128/256 key expansion, alg 2 key schedule is an empty function; the `Digit Monitor` softkey label is unreferenced. Details: [RX_CALL_PATH_ANALYSIS.md](RX_CALL_PATH_ANALYSIS.md) §15.
+
+### Catalog hygiene (2026-10-14, fifth pass)
+
+34 reviewed rows of `analysis/decompiled_modules/function_catalog.csv` updated (role, confidence, evidence; UTF-8 BOM and CRLF kept, other rows byte-identical, `tools/tests` 15/15 pass). Task entries and ISRs that Ghidra has no function for are listed in [DECOMPILED_MODULES.md](DECOMPILED_MODULES.md) instead of new rows.

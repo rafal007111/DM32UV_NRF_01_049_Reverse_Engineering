@@ -21,9 +21,31 @@ The current Ghidra export has 2,171 function boundaries: 1,958 marked ok and 213
 | Channel menu/codeplug | 0304DDB0, 0304B158, 03056FFC, 030571CC, 03056680, 03055CCC, 0304B010 | Menu id → setting id → channel record byte +0x0D / block-4 offsets. Code-verified; §6, §8. |
 | Data internals | 03026E78, 030260C4, 03025B28, 0302695C, 03026600, 03029674, 03024908, 03053D74, 0305D764, 0305DA8C | Reply/segmentation/retransmission, own call start, DCDM timing, Inbox records, 0x27 gating. Code-verified structure; protocol names inferred; §7. |
 | Settings menus/CPS/RF | 0304FBDC, 0304CCA0, 0305D8C0, 0304A45C, 0302B340 (task usb), 03029FB0, 0302A448, 0302B224, 0002C2F8, 0002C340, 0002B56C, 0300D84C, 0305F2F4, 030297A4, 03023EB8, 03023C10, 0305407C | Menu item → setting id → block-4 storage; CPS frames; BK4819-style register map (inferred); restart; rest-channel follow. See docs/SETTINGS_CPS_ANALYSIS.md. |
+| Baseband registers (datasheet) | 0002C458 (ISR, uncatalogued), 030239D4, 03023828, 0301E580, 03023574, 0305F2F4 | SYS_INTERP_LIST dispatch, per-slot voice enable, sync patterns/DCDM, cc_opt, soft reset. Datasheet + code; see docs/HR_C7000_CROSSCHECK.md. |
+| TS/CC Match design sites | 03028644, 03028BE4, 030282A4, 03028180, 030206D0 (rxvoice), 0305C334, 030275F4, 030280C0 | Final guarded site lists T1–T10 and C1–C7; design only. See docs/MATCH_OPTIONS_DESIGN.md §3.8–3.9. |
+| Settings storage | 0304B010, 0304B158, 030610D8, 0300F878, 03044248 | Block-4 0x60/0x85 readers, boot/save paths, variable-length 0x50 writer. See docs/SETTINGS_CPS_ANALYSIS.md §9. |
+| Recording/privacy/CPS words | 0302124C (task record, uncatalogued), 03010B40, 03061A44, 00014698, 000147AC, 0001CFAC, 0001D4B8, 00015880, 000160C0, 0302A9A8, 0302AA58, 030562C4 | Recording layout, RC4/AES structure, RTCITEM/PCTESTM, RX group list loader. See docs/RX_CALL_PATH_ANALYSIS.md §15. |
 
 Supporting Ghidra outputs are in analysis/reference. Targeted menu work is in analysis/ghidra_scripts and the earlier workspace's integration_review/menu_flow artifacts. The current source modules are in firmware/source.
 
 The decompilation export spans the application, but most functions remain unreviewed. RF/DSP interrupt flows, DMR slot and color-code accept/drop decisions, audio/recording, GNSS/APRS/roaming, settings persistence and CPS protocol need further work. Consult confidence column in the CSV before relying on a routine.
 
 Note (2026-10-14): `analysis/ghidra_scripts/32b_data.fixed.sinc` fix 3 corrects `zext`/`sext`; 156 of 2171 functions now decompile differently (multi-bit bit fields were one bit short). Re-check decompiler-derived bit widths in older notes against the disassembly.
+
+## Reviewed entries without a catalog row (2026-10-14)
+
+The catalog mirrors the 2,171 Ghidra function boundaries, so entries Ghidra lacks are listed here instead of adding
+rows (`tools/dm32` discovers them as `SUB_…`/`(new)`):
+
+| Address | Role | Evidence |
+|---|---|---|
+| `030206D0` | task `rxvoice` (event group `3658C`, mask `0x40006807`) | RX_CALL_PATH_ANALYSIS.md §1.2; MATCH_OPTIONS_DESIGN.md §3.8 |
+| `030209E4` | task `rxcsbk` (mask `0x7540000`) | DATA_PATH_ANALYSIS.md; CC_MATCH_DESIGN.md §5 |
+| `0301FF9C` | task `rxmsg` | DATA_PATH_ANALYSIS.md |
+| `0301FDD8` | task `txmsg` | RX_CALL_PATH_ANALYSIS.md §13 |
+| `0305F234` | task `psint` (UI status dispatch) | RX_CALL_PATH_ANALYSIS.md §1.3 |
+| `0302B340` | task `usb` (CPS handshake words) | SETTINGS_CPS_ANALYSIS.md §3.1 |
+| `0302124C` | task `record` | RX_CALL_PATH_ANALYSIS.md §15 |
+| `0002C458` | baseband system-interrupt ISR: drains `SYS_INTERP_LIST` into `3BEA0`, copies `RX_TYPE_INFO`/`RX_INFO` to `3BECC`/`3BEA4` | HR_C7000_CROSSCHECK.md §1 |
+| `0002D620` | task `txslot` loop (per-tick `0002D500`, `03023828`, `0002D7C8`, `0302343C`) | RX_CALL_PATH_ANALYSIS.md §2 |
+| `0002D770` | task `sysint` (calls `030239D4`) | RX_CALL_PATH_ANALYSIS.md §13 |
