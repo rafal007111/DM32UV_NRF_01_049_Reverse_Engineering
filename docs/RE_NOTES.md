@@ -108,3 +108,7 @@ code-verified: the readers of the configured CC `33CCD` are the four Monitor-idi
 ### Settings storage for new options (2026-10-14, fifth pass)
 
 Manual vs. firmware menus: Voice Func matches item for item; Display/Other Func have firmware-only items (MOTO, Lone Worker, Man Down, four display items). code-verified: block 4 `0x60` is read only by `0304B010` (bits 0/1) and the read-modify-write of settings 9/10, `0x85` bit 4 and `3EA05` bit 6 (MOTO) only by their own menu, `3BA6D` bits 5–7 by nothing; boot path `0305F674` → `0304A45C` … `0300C904` → `0304B010`. New risk (unreviewed bound): `030610D8` writes an editor text of variable length to block 4 `0x50`. Details: [SETTINGS_CPS_ANALYSIS.md](SETTINGS_CPS_ANALYSIS.md) §9.
+
+### Remaining internals (2026-10-14, fifth pass)
+
+code-verified: `030562C4` loads the RX group list (channel `+0x0F`) to `33CF4..33D73`, the TX contact sits at `33D74` (labels in earlier docs were shifted by one entry, filter unchanged); channel `+0x08` bits 2:1 = TX power; `RTCITEM` sets the clock and restarts; `PCTESTM` is a factory test loop; the recording task `0302124C` takes caller IDs from the call descriptor `3BD48` and uses flash sectors `0x6DC..0xFFF`; privacy alg 1 = RC4 (KSA/PRGA structure), 4/5 = AES-128/256 key expansion, alg 2 key schedule is an empty function; the `Digit Monitor` softkey label is unreferenced. Details: [RX_CALL_PATH_ANALYSIS.md](RX_CALL_PATH_ANALYSIS.md) §15.

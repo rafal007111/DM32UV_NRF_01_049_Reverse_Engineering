@@ -445,3 +445,42 @@ Still open: recording/vocoder internals, `03029C78`/`3C7A4`, `03023D24`, the CPS
 and `use_dual_phy`). `0305F2F4` (§7.9) asserts the CPU and system soft reset (`SYS_SOFT_RSTN` bits 8/7):
 datasheet + code. Status bit 17 is the EMB PI flag; `11000394` is `RX_INFO.rc_info`, whose 11 bits carry the
 burst-F KeyID/algorithm used by `03027628`.
+
+## 15. Fifth pass: remaining internals (2026-10-14)
+
+Inputs/tools as in `HR_C7000_CROSSCHECK.md` §0. Decompiler output was checked against `flash.asm`/`iram.asm` at the
+addresses given.
+
+| Item | Finding | Confidence |
+|---|---|---|
+| `030562C4(n)` — channel byte `+0x0F` bits 5:0 | **RX group list loader**: `0301E7A0(*3F020)` stores the channel TX contact at `33D74` (`33CC8+0xAC`); if `n ≠ 0` reads `0x60` bytes from data-flash area `0xF` at `(n−1)·0x6D + 0x1C` (32 three-byte IDs), and `0301E7B0(i, id)` stores them at `33CC8 + 4·(i+11)` = `33CF4 + 4·i` (`addi r0, 11` at `0301E7B2`). Matches qdmr's `groupListIndex` (`CHANNEL_RECORD.md`) | code-verified |
+| Correction — `33CF4`/`33CF8` | Earlier docs call `33CF4` "the channel contact" and `33CF8..33D77` "the 32 RX group list IDs". The writers show `33CF4..33D73` = group list entries 0–31 and `33D74` = TX contact; `0302768C` compares `33CF4` and the 32 words from `33CF8`, i.e. the union `33CF4..33D77` = group list + contact. Filtering behaviour is unchanged; only the labels move | code-verified |
+| Channel byte `+0x08` bits 2:1 | **TX power** (qdmr low/mid/high): read by `0300DB48` (`zext r1, r1, 2, 1` at `0300DB62` → `0301B3BC(freq, power)` → `3848C+0x28`), written by the power setting (`0304C0FA`) and forced to 2 by the channel loader `03057790` when called with load mode 4 (`03057FB4`; that caller's role is unreviewed). Replaces "forced to 2 (unreviewed)" in `SETTINGS_CPS_ANALYSIS.md` §3.2 | code-verified (names from qdmr) |
+| `03023D24(list, lsn, *out)` | rest-channel/LSN selection helper of the mode-2 (Capacity-Plus-like) path: walks the bitmap bytes of a CSBK/short-LC payload with lookup tables `030B…` (`DAT_03023DD0/DD4`) and returns a logical channel number; called only from `03023EB8` (rest-channel follow) when a rest channel is already known (`33D7C+0x72`), slot lock is not yet established and `33CDD == 0`. `03023EB8` is reached from CSBK FID `0x10` opcode `0x3E` in **any** mode (`03027B9C`, after the CC gate) and from the dormant mode-2 handler `030280C0` | code-verified structure and callers; protocol inferred |
+| `0302A9A8` (`RTCITEM`) | loop: read a 5-byte frame `'T' len …` (2000 ms timeout), answer `06`, convert 7 date/time bytes (`0301C6C8`) and set the RTC (`0301C3E0`), wait 500 ms, **restart** (`0305F2F4`) | code-verified; "set RTC from CPS" inferred |
+| `0302AA58` (`PCTESTM`) | factory test mode: sets `3FDD8` bit 1, `33CC8[2] = 1` (RF/test flag used by `030231C0`/`03023258`), then serves 5-byte commands (500 ms timeout, sub-command byte 2) that switch test configurations (`32AD1`, `32AD0`, `3E5F4`, `3E334[3]` bits 4:3, …); returns on a sub-command > `0x40`. Uses `030215C8` baseband test modes (`HR_C7000_CROSSCHECK.md` §7). Never entered without the `PCTESTM` word on USB | code-verified entry/exit; individual tests unreviewed |
+| Recording task `0302124C` (`"task record"`, created by `0300C904`) | waits until `3BD55` (`0302123C(n)` sets it) is 1 = RX recording (reads 27-byte vocoder frames with `0001620C`) or 2 = TX recording (`0002E398`); allocates sectors (`03010BD4`), and writes a header with flags, call class (`3E0DC+0x14`/`+0x1C`), RX: source/destination from the **call descriptor `3BD48`** (TX: `3BA3C+0x14/+0x10`), settings bytes `3E9D4+0x29/+0x26` and the RTC time (`0301C238`) | code-verified |
+| Recording flash layout | `03061A44` (boot, from `0305F674`): base `*030AEAEC = 0x6DC000`, end `*030AEAF0 = 0xFFFFFF`; sectors `0x6DC..0x6DE` index (`3FFEC..3FFF4`), `0x6DF..0x6E4` directory (`3FFE0..3FFF8`), data from `0x6E5` (`3FFE8`) to `0xFFF` (`3FFDC`), `3FFA4 = 0x919` data sectors. `03010B40` (`DEL-RCD`, also `030323F4`, `0303A748`, `030622D0`, `03010BD4`) erases the index and directory sectors and writes markers `A5` (sector `0x6DC` and `0x6DF`, offset `0xFFF`) and `A6` (sector `0x6E0`) | code-verified addresses; roles inferred |
+| Vocoder control | `00015F30(level, dir)` stores a 0–6 / 0–4 gain into vocoder state `48184+0x1736/0x1738` and `456E4+0x1166/0x1168`; `00016000(x)` → `456E4+0x1494`; `0001600C(b)` → `456E4+0x1495 = !b`; `000160C0` sets `456E4+0x1150 = 1`, `INTERP_CLEAR` (`0x3B0`) bit 5 (clear PCM-read interrupt) and **`AUDIO_CONTROL.ahb_rd_voice_en`** (`0x080` bit 5) — datasheet p. 96: "AHB read voice enable" = start of decoded-audio playback | code-verified; datasheet names |
+| Privacy algorithms (`00015728`, alg byte `3F720`) | alg 1: `00014698` = **RC4 key schedule** (S[i]=i, key repeated with length 9, swap) and `000147AC` = RC4 output that discards 256 bytes and produces `0x7E` = 126 bytes (6 frames × 21); alg 2: `0001D4B8` is an **empty function** in this build, followed by `0001D3E0`/`0001D4C4`; alg 4/5: `0001CFAC(key, w, 4, 10)` / `(…, 8, 14)` = **AES key expansion** with Nk/Nr of AES-128/AES-256 (RotWord/SubWord `0001CE88`, Rcon table at `180011A4+0x1FC`, extra SubWord for Nk > 6). `00015880(ks, frame, n)` XORs a 27-byte voice burst with 21 keystream bytes per frame, masking the bits that are not AMBE payload. Names from the user manual ("custom, ARC4, AES128, AES256") | code-verified structure; algorithm names inferred from structure |
+| `0001556C` | rebuilds 4-bit groups from scattered bits of a 27-byte voice burst (bytes 7/8, 0x10/0x11, 0x19/0x1A) — inferred: extraction of AMBE frame bits for the privacy/IV path | unreviewed purpose |
+| `Digit Monitor` softkey | softkey labels are Chinese/English pairs of 8-byte descriptors from `030BA698` (`OK`, `CANCEL`, `BACK`, `Del`, `Option`, `Digit Monitor`, `Ignore?`, `Send`); code loads the pair base by literal and adds `8·language` (`03019BF6`, `0305F5BC`). Literals exist for the OK, CANCEL, BACK, Del, Option and Send pairs only; the `Digit Monitor` pair (`030BA6E8`) and `Ignore?` pair (`030BA6F8`) have no literal or table reference → **unused labels** in this build | inferred (absence; raw word scan of the image) |
+| Status bit 17 / event `0x4000` | bit 17 is the EMB **PI** flag (datasheet); `03028BE4` stores the embedded privacy parameters to `3C685+12·slot` and posts `0x4000`, which `rxvoice` only clears | datasheet + code (consumer: none) |
+
+### 15.1 Open questions (owner)
+
+1. Does the radio offer recording of received calls (menu "Rx Record")? If so, a recording made during a call should
+   show the caller ID — useful later to check the TS Match off descriptor change (`MATCH_OPTIONS_DESIGN.md` §3.8, T7).
+2. Which privacy types does the owner use? Type 2 ("custom") has an empty key-schedule function in this build.
+
+### 15.2 RX-only hardware tests
+
+| Finding | Test | Expected |
+|---|---|---|
+| RX group list loader | Program a channel whose RX group list contains a talkgroup different from the TX contact; receive both | Both heard (GCall Match on) |
+| `RTCITEM` restart | Owner observation only when the CPS sets the clock | Radio reboots after a clock write |
+
+### 15.3 Still not reviewed
+
+`0001D3E0`/`0001D4C4` (alg 2 body), `0001620C`/`0002E398` frame sources, `03010BD4` sector allocation, the
+`PCTESTM` sub-commands, load mode 4 of `03057790`, the `Call Log` writer.

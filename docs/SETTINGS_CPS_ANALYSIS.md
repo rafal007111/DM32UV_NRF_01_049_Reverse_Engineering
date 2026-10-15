@@ -167,7 +167,7 @@ confirms them.
 | `+0x04..+0x07` | | TX frequency; forced to RX when `+0x0A` bit 3 is set or the radio state `3E335 == 0x10` (talkaround), unless `+0x0A` bit 7 |
 | `+0x08` | 7:4 | channel type: 0 analog, 1 digital, 2/3 mixed types (setting `'D'`, menu `Channel Type`) |
 | `+0x08` | 3 | Rx Only (`0301EC1C` → `3BA6C` bit 1); forced on, with type 0, for frequencies in the AM window |
-| `+0x08` | 2:1 | forced to `2` when the channel is loaded with mode argument 4 (unreviewed) |
+| `+0x08` | 2:1 | TX power (read by `0300DB48`); forced to `2` when the channel is loaded with mode argument 4 (`RX_CALL_PATH_ANALYSIS.md` §15) |
 | `+0x0A` | 7 | set by the loader when RX == TX (simplex) |
 | `+0x0A` | 6:4 | **TX admit policy** → `33CD0` (`MATCH_OPTIONS_DESIGN.md` §3.6) |
 | `+0x0A` | 3 | talkaround (TX := RX), inferred |
@@ -175,7 +175,7 @@ confirms them.
 | `+0x0C` | 3:2 | value 1 with digital type 1/3 enables privacy TX (`4009C` bit 0) using key slot `+0x10` (0–7) from block 4 `(slot+400)·2` (`Digit Encrypt`, inferred) |
 | `+0x0D` | 3:0 | Colour Code (`0301E7BC`) |
 | `+0x0D` | 4 / 5 | Time Slot / Double Slot (`RX_CALL_PATH_ANALYSIS.md` §6) |
-| `+0x0F` | 5:0 | passed to `030562C4` (unreviewed) |
+| `+0x0F` | 5:0 | RX group list index → `030562C4` (`RX_CALL_PATH_ANALYSIS.md` §15) |
 | `+0x16` | 6:4 | analog RX squelch/tone type (`03060A74`) |
 | `+0x1B` | | DMR ID list index → own ID (`03057654`, `0301E798`) |
 
