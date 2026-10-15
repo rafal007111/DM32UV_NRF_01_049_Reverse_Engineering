@@ -50,3 +50,14 @@ The prebuilt `C-SKY.jar` from the zip was not committed or installed; its source
 `python3 tools/dm32 …` provides annotated listings, callers/callees/call trees, RAM/MMIO access search, string
 uses, look-alike functions, cached Ghidra decompilation from the GZF and uC/OS-III identification. Details,
 limits and tests: [DM32RE_TOOLS.md](DM32RE_TOOLS.md). The reference corpus needs `--with-gcc`.
+
+### Fifth-pass helpers (2026-10-14)
+
+Read-only, run with `python3 -I` after `tools/static/objdump_image.sh` has produced `$ASM/flash.asm` and `$ASM/iram.asm`:
+
+- `tools/static/ram_scan.py $ASM LO HI` — register-tracking scan for loads/stores and indexed accesses that land in a
+  RAM range (used for the free-RAM check `3BEBD..3BECB` and the `33CCD`/`3C61A`/`3BA6D` reader lists; it reproduces the
+  40 known `3BEB8..3BEBC` accesses). Heuristic: values passed through memory or across branches are not tracked.
+- `tools/static/site_bytes.py STOCK INSTALLED VA:len …` — prints the stock bytes of patch-design sites and compares them
+  with the installed image (used for the site tables in `MATCH_OPTIONS_DESIGN.md` §3.7–3.9).
+- Datasheet text: `pdftotext -layout "docs/HR_C7000 Document 2.pdf" c7000.txt` (poppler; page numbers = "第 N 页" footers).
