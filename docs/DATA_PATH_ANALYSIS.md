@@ -307,11 +307,25 @@ Recommended design for CC Match off (inferred, not implemented):
    `03026A14`, `03026E78` and the `"WLT CMD"` reply for it.
 3. Never bypass the CSBK CC check (`03027B9C`), and leave `03027334` (TX admit) untouched.
 
+## 8a. CSBK decode flags and Rx Only channels (moved from `CC_MATCH_DESIGN.md` §5, 2026-10-15)
+
+*Moved verbatim (apart from this heading) when `CC_MATCH_DESIGN.md` became a pointer page; the finding was made on
+2026-10-14 and is unchanged.*
+
+CPS/NeonPlug "Remote Monitor / Radio Disable / Radio Check / Radio Enable / Call Alert Decode" are block 4 byte `0x65`
+bits 7/6/5/4/3 (NeonPlug `RadioSettings.ts`, qdmr `dmrMonitor`/`dmrKill`/`dmrRadioCheck`/`dmrReenable`/`dmrRXAlert`),
+loaded by `0305D8C0` into `3BD58`. In `rxcsbk` `030209E4` (code-verified via decompiler and pointer literals
+`3BD58`, `3BA54`): on a normal channel a disabled decode answers NACK and skips the action; **on an Rx Only channel
+(`3BA6C` bit 1) Disable (stun), Enable and Call Alert are executed without checking the decode flags**
+(`0302154C(6)` → `0305EB8C` → `0305DFDC` for stun). Radio Check and Remote Monitor do nothing on Rx Only channels.
+Only same-CC CSBKs reach this code (`03027B9C` CC gate, §2.4). Not hardware-verified. The TS/CC Match candidate
+(`MATCH_OPTIONS_CANDIDATE.md`) does not change the CSBK CC gate, so this behaviour is unchanged by it.
+
 ## 9. Open points for the owner
 
 - Should received foreign-CC group texts be stored in the Inbox (flash) or only shown?
 - Is the `"WLT CMD "` GPS poll wanted at all (it answers any matching sender with the radio's position)?
-- ~~CPS names of the decode bits in block 4 `0x65`~~ resolved 2026-10-14 from NeonPlug/qdmr: bit 7 Remote Monitor Decode, 6 Radio Disable Decode, 5 Radio Check Decode, 4 Radio Enable Decode, 3 Call Alert Decode, 2:1 Data Service, 0 Missed Call Alert. **Rx Only channels execute Disable/Enable/Call Alert regardless of these flags** (CC_MATCH_DESIGN.md §5). H/M/D-SMS mapping still open.
+- ~~CPS names of the decode bits in block 4 `0x65`~~ resolved 2026-10-14 from NeonPlug/qdmr: bit 7 Remote Monitor Decode, 6 Radio Disable Decode, 5 Radio Check Decode, 4 Radio Enable Decode, 3 Call Alert Decode, 2:1 Data Service, 0 Missed Call Alert. **Rx Only channels execute Disable/Enable/Call Alert regardless of these flags** (§8a). H/M/D-SMS mapping still open.
 - Owner hardware checks, all receive-side and without patches: whether CPS shows "Radio Disable decode" etc.;
   with stock firmware, send a radio check from a second radio on the same CC to confirm the ACK path; do **not**
   test Disable on the only radio (stun is persistent until an Enable is received).
