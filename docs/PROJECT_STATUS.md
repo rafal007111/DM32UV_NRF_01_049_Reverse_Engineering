@@ -13,3 +13,7 @@ The address catalog has 2,171 entries. Only a subset has been manually named and
 ### Legacy recovery follow-up (2026-10-13)
 
 The actual 2171-function Ghidra database is now available as `analysis/archives/DM32_NRF_049_correct_base.gzf`; stock and installed program images are versioned with owner authorization. The exact 568cb4e3 intermediate was found in the legacy Documents/Codex workspace, and both historical byte deltas are verified. This supersedes earlier missing-baseline statements; full historical build/installer provenance remains unreviewed. See [LEGACY_RECOVERY.md](LEGACY_RECOVERY.md).
+
+### Branch consolidation (2026-10-15)
+
+All agent branches were consolidated into `master` (fast-forward to the most complete branch, which already contained every other branch; no commit was lost or rewritten). Since 2026-10-14 the static work added the HR_C7000 register cross-check (hardware CC filter `cc_opt` exists; no hardware slot filter is used), the received call path, settings/CPS map, channel record layout, `tools/dm32` helpers and a design-only TS/CC Match site inventory. Nothing new was built into an image, installed or hardware-tested; TS/CC Match remain unimplemented. Host tests: firmware 10 passed / 1 skipped, tools 15 run / 9 skipped (no objdump/Ghidra in the check environment).

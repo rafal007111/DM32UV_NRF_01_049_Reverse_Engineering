@@ -28,3 +28,18 @@ See [docs/REPRODUCIBILITY.md](docs/REPRODUCIBILITY.md) for the host test runner,
 ### Legacy recovery follow-up (2026-10-13)
 
 The actual 2171-function Ghidra database is now available as `analysis/archives/DM32_NRF_049_correct_base.gzf`; stock and installed program images are versioned with owner authorization. The exact 568cb4e3 intermediate was found in the legacy Documents/Codex workspace, and both historical byte deltas are verified. This supersedes earlier missing-baseline statements; full historical build/installer provenance remains unreviewed. See [LEGACY_RECOVERY.md](docs/LEGACY_RECOVERY.md).
+
+## Documentation map (2026-10-15)
+
+Reading order for new work: AGENTS.md, this file, [RE_NOTES.md](docs/RE_NOTES.md) (dated entries; later entries win), [DECOMPILED_MODULES.md](docs/DECOMPILED_MODULES.md).
+
+| Topic | Document |
+|---|---|
+| Status and provenance | [PROJECT_STATUS.md](docs/PROJECT_STATUS.md), [REPRODUCIBILITY.md](docs/REPRODUCIBILITY.md), [LEGACY_RECOVERY.md](docs/LEGACY_RECOVERY.md) |
+| Tools | [TOOLS.md](docs/TOOLS.md), [DM32RE_TOOLS.md](docs/DM32RE_TOOLS.md) (`tools/dm32`), [EXTERNAL_RESOURCES.md](docs/EXTERNAL_RESOURCES.md) |
+| Baseband chip | [HR_C7000_CROSSCHECK.md](docs/HR_C7000_CROSSCHECK.md), datasheet `docs/HR_C7000 Document 2.pdf` |
+| Receive path | [RX_CALL_PATH_ANALYSIS.md](docs/RX_CALL_PATH_ANALYSIS.md), [DATA_PATH_ANALYSIS.md](docs/DATA_PATH_ANALYSIS.md), [MONITOR_ANALYSIS.md](docs/MONITOR_ANALYSIS.md) |
+| Time slot / Colour Code | [TS_ANALYSIS.md](docs/TS_ANALYSIS.md), [CC_MATCH_ANALYSIS.md](docs/CC_MATCH_ANALYSIS.md) |
+| TS/CC Match design (design only, no image) | [MATCH_OPTIONS_DESIGN.md](docs/MATCH_OPTIONS_DESIGN.md) (site inventory, latest), [CC_MATCH_DESIGN.md](docs/CC_MATCH_DESIGN.md) |
+| Settings, CPS, codeplug | [SETTINGS_CPS_ANALYSIS.md](docs/SETTINGS_CPS_ANALYSIS.md), [CHANNEL_RECORD.md](docs/CHANNEL_RECORD.md), user manual `docs/Baofeng_DM-32UV_User_Manual_20250210.pdf` |
+| Next unattended agent | [NEXT_AGENT_PROMPT.md](docs/NEXT_AGENT_PROMPT.md) |

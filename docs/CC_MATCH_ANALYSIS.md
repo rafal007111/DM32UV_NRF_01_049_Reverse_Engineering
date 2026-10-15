@@ -23,8 +23,8 @@ setting, `03057790`), IRAM `0002D7C8` (TX burst loader, mode 4 only: `11000384` 
 
 Hardware: `11000384` bits 3:0 hold the configured CC and bit 8 is set by Monitor and forced in RX mode 4. By the
 HR-C6000 analogy (OpenGD77 register `0x1F` LocalEMB CC, `0x21` "polite to colour code") these are the C7000
-local CC/EMB fields; whether bit 8 relaxes a hardware CC check is inferred, not verified. Software alone decides
-acceptance at the sites above.
+local CC/EMB fields; whether bit 8 relaxes a hardware CC check is inferred, not verified. ~~Software alone decides
+acceptance at the sites above.~~ *Superseded 2026-10-14: the datasheet documents a hardware CC filter (`cc_opt`), see below.*
 
 Design note: the stock Monitor flag (`3BA6C` bit 3) covers the first four rows but also disables the talkgroup and
 private-call filter in `0302768C`. A CC-only option therefore needs its own flag tested at the RX rows above, with
