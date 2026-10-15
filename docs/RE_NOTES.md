@@ -104,3 +104,7 @@ Same inputs/tools as the entry above; no image built. code-verified: every recei
 ### CC Match off completeness (2026-10-14, fifth pass, design only)
 
 code-verified: the readers of the configured CC `33CCD` are the four Monitor-idiom voice sites, the `3C626` counter, PI/data/CSBK handlers, TX admit `03027334` and the mode-4 TX loader — nothing else in flash, IRAM or the task entries (completeness inferred from two trackers and a `zext 7,4` census). Corrections: the data-sync gate is the only CC filter for Idle bursts, so a bypass there must be limited to data types 1/2; with `cc_opt = 1` foreign frames update `3C61A`/`3BEAB` and so TX admission, exactly like stock Monitor, unless a dispatcher wrapper restores them. Burst-F late-entry decryption (`03027628`) has no CC test; mode 2 is never set in this build. Site list C1–C7 in [MATCH_OPTIONS_DESIGN.md](MATCH_OPTIONS_DESIGN.md) §3.9.
+
+### Settings storage for new options (2026-10-14, fifth pass)
+
+Manual vs. firmware menus: Voice Func matches item for item; Display/Other Func have firmware-only items (MOTO, Lone Worker, Man Down, four display items). code-verified: block 4 `0x60` is read only by `0304B010` (bits 0/1) and the read-modify-write of settings 9/10, `0x85` bit 4 and `3EA05` bit 6 (MOTO) only by their own menu, `3BA6D` bits 5–7 by nothing; boot path `0305F674` → `0304A45C` … `0300C904` → `0304B010`. New risk (unreviewed bound): `030610D8` writes an editor text of variable length to block 4 `0x50`. Details: [SETTINGS_CPS_ANALYSIS.md](SETTINGS_CPS_ANALYSIS.md) §9.

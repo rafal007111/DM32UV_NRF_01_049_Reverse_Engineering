@@ -227,3 +227,74 @@ Exact bit for Ana Roger; Display colour storage offsets beyond CallSign Color; `
 §5 `0305F2F4`: `11000000` is `SYS_SOFT_RSTN` (bits 8/7 = CPU/system soft reset, active low) and `1100005C` is
 `QUAD_ENABLE` (SPI flash four-wire mode) — restart is now datasheet + code ([HR_C7000_CROSSCHECK.md](HR_C7000_CROSSCHECK.md)).
 §5 status bit 17: the datasheet names it the received EMB **PI** flag (privacy indicator).
+
+## 9. Storage for TS/CC Match options — fifth pass (2026-10-14)
+
+Inputs/tools as in `HR_C7000_CROSSCHECK.md` §0. Static only.
+
+### 9.1 Menu labels checked against the user manual
+
+`docs/Baofeng_DM-32UV_User_Manual_20250210.pdf` (SHA-256 `092d6f1f…24b3`, read with `pdftotext -layout`) §7.6.1:
+
+| Menu | Manual items | Firmware list (§1) | Result |
+|---|---|---|---|
+| Voice Func (7.6.1.1) | Radio Silent, Battery Low, Key Tone, SMS Prompt, Group Call ("tone when a group call is received"), Private Call, Call End, Talk Permit, StartUp Sound, Voice Prompt, Analog Roger | items 0–10 in the same order | **matches**; Group/Private Call = call-start tones confirmed by the manual |
+| Display Func (7.6.1.3) | 14 items (Back Light … Menu Exit Time; "Back Time" = Light Time) | 18 items | firmware also has Start Character Edit, CallSign Color, Display CHL Num, Time Set (not in the manual) |
+| Other Func (7.6.1.4) | 19 items, ending with (18) PrivateCall Match, (19) GroupCall Match | 22 items | firmware also has Lone Worker, Man Down (manual §5.13 describes Man Down elsewhere) and **MOTO** (no manual text) |
+| Channel Set (7.6.2) | … Time Slot ("Slot 1 or Slot 2"), Channel Type, **Double Slot** (On/Off, "two slots synchronously") | channel menu ids 6 and 10 | matches; Double Slot = DCDM (`HR_C7000_CROSSCHECK.md` §1) |
+| Monitor (5.10, 4.3) | "monitor weak signal and signal with unmatched ID"; an LCD icon "Monitor is turned on" | `MONITOR_ANALYSIS.md` | manual confirms the talkgroup/ID bypass; the icon source is not found yet (unreviewed) |
+
+PrivateCall/GroupCall Match manual text: "Off: … receive and respond to … calls with the same frequency/Color Code/Time
+Slot" — i.e. the stock options already describe CC and TS as fixed filters, which is what new options would relax.
+
+### 9.2 Who reads block 4 `0x60`, `0x85` and RAM `3BA6D`/`3EA05` (code-verified sites; completeness inferred)
+
+Method: all calls to the area readers/writers `0300F780(area, off, buf, len)`, `0300F71C(handle, off, buf, len)` (handles
+from `0300F594(4)`: `0300D568`, `03040A44`, `0304A45C`, `0304B010`, `03058528`, `0305D8C0`, `030656E8`, `03065914`),
+`0002B9A0` (raw), `0300FA28(area, off, byte)` and `0300F878(area, off, buf, len)` were listed from the decompiler
+export and with a constant back-tracker over the disassembly; RAM accesses with the register-tracking scan of
+`MATCH_OPTIONS_DESIGN.md` §3.8.4.
+
+| Item | Readers / writers found | Conclusion |
+|---|---|---|
+| block 4 `0x60` | read: `0304B010` (boot, bits 0/1 only), `0304B158` settings 9/10 at `0304B6B4`/`0304B716` (byte read, `bseti`/`bclri` bit 0 or 1, write back with `0300FA28` at `0304B6EE`/`0304B75E`) | bits 2–7 have no reader and every writer preserves them (read-modify-write). No bulk read covers `0x60` (bulk reads: `0x34`+8, `0x40`+3, `0x87`+16, `0xA0`+5, `0x430`+9; variable offsets are `(n+400)·2`, `(n+0x8F)·2`, `5n+0x200`, `7n+0x230`, all ≥ `0x11E`) |
+| block 4 `0x50` | **write** `030610D8` → `0300F878(4, 0x50, 3EEB8, len = 3EE49)` (text-editor buffer), called from the non-table branch of the channel-menu confirm `0304DDB0` (scene `18000A98 == 10`, `18000B0A == 3`, id 8) | no reader of `0x50` found. The editor's maximum length is set per editor by `03059C14(n)` (`n` ∈ {10, 11, 12, 16, 128} at the decompiled call sites); which `n` applies to this path is **not traced**. If it can exceed 16, this writer would overwrite `0x60` (stock PCall/GCall Match and the proposed bits) — open item |
+| block 4 `0x85` | `0304A45C` (boot, bits 0–3), `0304B158` setting `0x0F` (`0304B982`/`0304B9BC`), Other-menu MOTO case `030501FA`/`03050226` (read-modify-write bit 4) | bit 4 is written only by its own menu item |
+| RAM `3EA05` bit 6 (MOTO mirror) | `0304A45C` (boot), `0304FBDC` (toggle), `03044248` at `030450CC` (copies bit 6 into the list index `3E5EC` when the menu opens) | **only the menu itself reads MOTO**; no functional reader (refines §1.4 "no reader") |
+| RAM `3BA6D` (`3BA54+0x19`) | 41 accesses; reads use masks 1, 2, 4, 8, `0x11` (one `and r3, r2` at `0301E1CE` with `r2 = 1`); writes are `ins` of bits 0, 1/2 (`0301ECF0`), 3, 4 | bits 5–7 never read or written; no block copy or `memset` covers `3BA54..3BA6D` (checked calls of `0002B350`, `0002B338`, `03070B88`, `0306BC6C`) |
+| RAM `3EA06` (`3E9D4+0x32`) | `0304A45C`, `0304B010`, `0304B158`, getter `0304C434` (bits 4, 5, 6, 3:2), `030611B0`/`030611D8` (bit 4) | bits 5/6 are PCall/GCall Match; bit 7 unused by the paths found (not proposed) |
+
+### 9.3 Boot-load and save paths a new option would use
+
+- **Boot order** (code-verified): main task `03068E54` → `0305F674` → `0304AFE8` → `0304A45C` (general settings
+  into `3E9D4…`) → … → `0300C904` (creates the RTOS event groups and DMR tasks) → **`0304B010`** (block 4 `0x60..0x64`,
+  `0301ECF0` → `3BA6D`). A new option belongs in `0304B010` after the `0x60` read (`0304B0DA`, `fe e3 21 23` =
+  `bsr 0300F71C`), e.g. by extending the cave that already receives `local_10[0]`; the RTOS objects exist at that point.
+  `3BA54` lies in the BSS zeroed at reset (`0x2F0B4…0x4A7E0`), so the new bits are 0 (stock) until loaded.
+- **Save path** (code-verified pattern): Other-menu confirm `0304FBDC` → `0304B158(id, v)` → `0300F780(4, 0x60)` read →
+  `bseti`/`bclri` → `0300FA28(4, 0x60, byte)` (sector read-modify-write) → `3EA06` mirror → `0301ECF0`. A TS/CC Match
+  item needs: two strings and list entries 22/23 (descriptor `030B9708`, count `0x16`), cases after `030501DE` (table
+  `030B22F0`, bound `cmphsi r2, 22` at `0304FF9E`), two new setting ids in `0304B158`, and a getter case in `0304C434`
+  for the menu preselection — all **inferred design**.
+- **CPS**: a `PROGRAM` session writes whole 4 KiB sectors and always ends with a restart (§3.1), after which
+  `0304B010` reloads the byte. Whether the official CPS preserves bits 2–7 of `0x60` is still the owner's check
+  (the merged NeonPlug reading in `CC_MATCH_DESIGN.md` §3 says NeonPlug preserves them).
+- **Choice of RAM flag**: `3BA6D` bits 5/6 (this repository's `MATCH_OPTIONS_DESIGN.md` §2) are free and sit next
+  to the PCall/GCall bits written by the same `0301ECF0`; `CC_MATCH_DESIGN.md` §3 proposes the mod's own block at
+  `4BFC0`. Both are free (inferred); `3BA6D` avoids touching the Scan Zone mod's RAM, `4BFC0` keeps all mod state in
+  one place. Owner decision; the caves are the same size either way.
+
+### 9.4 Open questions and RX-only checks (owner)
+
+1. CPS (read only): load a codeplug file with block 4 `0x60` bit 2 set, save it with the official CPS, compare
+   (PC-only). Expected if safe: bit preserved.
+2. Which radio menu edits the text written to block 4 `0x50` (channel menu, non-table branch, scene 10)? Enter the
+   longest possible text there, then read the codeplug with CPS and check that byte `0x60` (PCall/GCall Match) is
+   unchanged.
+3. Where is the Monitor icon drawn (manual §4.3)? Press Monitor on a digital channel and note whether an icon
+   appears.
+
+### 9.5 Not reviewed
+
+The `0x50` editor's length bound; Display Func storage for the four items missing from the manual; the `Call Log`
+writer; `3EA06` bit 7 and bits 0/1.
