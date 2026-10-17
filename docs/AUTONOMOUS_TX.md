@@ -24,7 +24,7 @@ Safe test practice (owner): for RX-only tests use an Rx Only channel where possi
 Roaming, VOX and the GPS beacon interval in CPS, do not send texts/CSBKs to the radio's own ID from another radio unless a reply transmission is
 acceptable, and do not press `Alarm`.
 
-Not reviewed: the DTMF/TBST paths, Remote Monitor duration (`3FD78`).
+Not reviewed: the DTMF/TBST paths. Remote Monitor duration: §3.
 
 ## 1. VOX (2026-10-17, code-verified flow; signal names inferred)
 
@@ -59,3 +59,23 @@ Lone Worker response time (`× 60`) are counted in ScanDisp ticks, which fits a 
 of 30 s / 1 min / 1 min **if** `0002CABC` runs every millisecond (period of the timer not established).
 The ScanDisp task skips the beacon and roaming steps while `3E172` (scan state `3E160+0x12`) is non-zero, `3FDD9` bit 1 or `3E338` bit 2 is
 set, a menu scene (`320CB` 1…`0x3F`) is open, or `030649A8()` is neither 0 nor 1.
+
+## 3. TX timeout timer and Remote Monitor duration (2026-10-17, code-verified flow; units inferred)
+
+`03055A70` runs on every main-loop step (`03013940`, call at `03013C68`) while a transmission is active (`3ECE6`
+bit 0) or a Remote Monitor is running (`3FD4C` bit 0). On start it loads the limit into `3ECE0+4`:
+
+| Case | Limit (`3ECE0+4`) |
+|---|---|
+| normal TX | `(TX Timer − 1) × 5 + 15` from `3E9D4+0x35` (`3EA09`, Other Func **TX Timer**, block 4 `0xA0`); TX Timer 0 → no limit (bit cleared, return) |
+| Remote Monitor | `3FD78` (`(block 4 0x66 + 1) × 10`, 0 → 120, `SETTINGS_CPS_ANALYSIS.md` §2), reduced to the TX Timer limit when that is set (values 1–22) and smaller |
+
+Every 100 steps it increments `3ECE0+2`; at `limit − 3E9D4+0x37` (`3EA0B`, Other Func **TOT Predict**) it plays tone
+`0x15` (the four-times repeated pattern of `AUDIO_TONES.md`); at the limit it sets `3ECE6` bit 1 (normal TX), shows popup
+100 (`030130AC(1, 100)`) when `320CB` is non-zero and the channel type nibble is 0, and posts event `0x10` on `3A50C`, which ends the
+transmission (inferred from the event's use as the TX stop request).
+
+So a Remote Monitor transmission lasts at most 10–120 counts, and every transmission is cut at the TX Timer limit.
+With the main-loop step at 10 ms (§2, inferred), one count is 1 s: TX Timer values give 15 s, 20 s, … and Remote
+Monitor 10–120 s — consistent with the usual CPS ranges, which supports the 1 ms / 10 ms / 1 s reading of §2 (still
+inferred; the timer period of `0002CABC` is not established).
