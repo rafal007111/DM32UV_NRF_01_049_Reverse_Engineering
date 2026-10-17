@@ -24,3 +24,9 @@ Static documentation only: HR_C7000 register leads closed (`HR_C7000_CROSSCHECK.
 channel reload reasons (`RX_CALL_PATH_ANALYSIS.md` §16), the `0x50` overwrite risk removed (`SETTINGS_CPS_ANALYSIS.md`
 §10), design-document consolidation. The TS/CC Match candidate module, target build and patch plan are still open.
 Nothing built into an image, installed or hardware-tested.
+
+### Pinned toolchain on Linux (2026-10-17)
+
+The pinned T-HEAD V3.10.29 B20210423 compiler also exists as a native x86_64 Linux build; `tools/setup_cloud.sh --with-thead`
+and `firmware/build_csky.sh` reproduce the installed scanner module byte for byte (`b66ca064…`) and the installed image
+in memory (`156a4872…`). Byte-exact target builds no longer require the owner's Windows machine.
