@@ -68,3 +68,12 @@ rows (`tools/dm32` discovers them as `SUB_…`/`(new)`):
 
 Uncatalogued library functions (inside catalog gaps, no Ghidra boundary; mutex, memory-partition, task-queue and
 `Mem_Pool*` APIs) are listed in LIBRARY_SIGNATURES.md §6–§7 as leads.
+
+## Subsystem tags for unreviewed rows (2026-10-17)
+
+898 of the 1669 unreviewed rows carry `subsystem = auto: <tag>` (still `unreviewed`): a lead from task reachability,
+strings, I/O, RAM owners and call neighbours, 90.5 % agreement in a hand spot check (74 functions). Largest groups:
+`shared (UI tasks)` 240, `Audio/vocoder` 173 (IRAM vocoder library), `Menu/input` 78, `Main loop` 57, `Baseband
+registers` 54, `CPS/USB` 43, `UI/call display` 39, `shared (DMR tasks)` 33. Filter the catalog on `auto:` to navigate;
+see [SUBSYSTEM_TAGS.md](SUBSYSTEM_TAGS.md) for the method and weak spots, and
+`analysis/decompiled_modules/subsystem_tags.csv` for all tags with reasons.

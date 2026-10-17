@@ -37,6 +37,8 @@ Reading order for new work: AGENTS.md, this file, [RE_NOTES.md](docs/RE_NOTES.md
 |---|---|
 | Status and provenance | [PROJECT_STATUS.md](docs/PROJECT_STATUS.md), [REPRODUCIBILITY.md](docs/REPRODUCIBILITY.md), [LEGACY_RECOVERY.md](docs/LEGACY_RECOVERY.md) |
 | Tools | [TOOLS.md](docs/TOOLS.md), [DM32RE_TOOLS.md](docs/DM32RE_TOOLS.md) (`tools/dm32`), [EXTERNAL_RESOURCES.md](docs/EXTERNAL_RESOURCES.md) |
+| Libraries, RTOS, task list | [LIBRARY_SIGNATURES.md](docs/LIBRARY_SIGNATURES.md) |
+| Subsystem tags of unreviewed functions | [SUBSYSTEM_TAGS.md](docs/SUBSYSTEM_TAGS.md) |
 | Baseband chip | [HR_C7000_CROSSCHECK.md](docs/HR_C7000_CROSSCHECK.md), datasheet `docs/HR_C7000 Document 2.pdf` |
 | Receive path | [RX_CALL_PATH_ANALYSIS.md](docs/RX_CALL_PATH_ANALYSIS.md), [DATA_PATH_ANALYSIS.md](docs/DATA_PATH_ANALYSIS.md), [MONITOR_ANALYSIS.md](docs/MONITOR_ANALYSIS.md) |
 | Time slot / Colour Code | [TS_ANALYSIS.md](docs/TS_ANALYSIS.md), [CC_MATCH_ANALYSIS.md](docs/CC_MATCH_ANALYSIS.md) |

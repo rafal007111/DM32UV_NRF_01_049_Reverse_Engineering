@@ -49,3 +49,9 @@ uC/LIB 15, libm 10, C runtime 43; 174 were unreviewed, 3 raised from low) and 4 
 1669 rows remain unreviewed.
 Kernel configuration and the full task list are in [LIBRARY_SIGNATURES.md](LIBRARY_SIGNATURES.md) §6. No image
 written, no hardware test needed.
+
+### Subsystem tags (2026-10-17)
+
+`tools/dm32 tag` gives 898 of the 1669 unreviewed catalog rows an `auto:` subsystem lead (90.5 % agreement in a
+74-function spot check); the rest are shared across task families (248), have no evidence (114) or stay below the
+threshold. See [SUBSYSTEM_TAGS.md](SUBSYSTEM_TAGS.md). No image written, no hardware test needed.

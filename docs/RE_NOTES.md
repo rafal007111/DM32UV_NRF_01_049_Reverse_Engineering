@@ -196,3 +196,10 @@ stacks; `0302DF18` is `task CallDisp`); the C-SKY port (`OSCtxSw` `000105BE`, in
 block `0306D800–0306F97C` is fdlibm libm plus libgcc fp-bit soft-float. `tools/dm32 libsig --norm` normalises the
 vendor encodings: malloc/memset/isspace/strtoul identical. 174 catalog rows named. Details:
 [LIBRARY_SIGNATURES.md](LIBRARY_SIGNATURES.md) §6–§9. No radio access, no image written.
+
+2026-10-17 subsystem tags (static): `tools/dm32 tag` tags every unreviewed function from task reachability (37 roots,
+function-pointer and handler-table edges), strings, MMIO bases (GPIO ports `0x14020000`/`0x14100000`/`0x14110000`
+and a second UART `0x14030000` identified by register layout, inferred), RAM owners and call neighbours; 898 rows get
+`subsystem = auto: <tag>` (confidence unchanged). Hand spot check: 67 of 74 decided tags agree (90.5 %) after the
+keys-task and startup reach were weakened (they caused 5 of 8 errors in round 1). Details:
+[SUBSYSTEM_TAGS.md](SUBSYSTEM_TAGS.md). No radio access, no image written.

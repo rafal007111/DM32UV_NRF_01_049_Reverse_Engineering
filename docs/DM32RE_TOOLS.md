@@ -84,3 +84,12 @@ its `libid` results are in `analysis/decompiled_modules/libid_ucos3_thead_candid
 self-extensions, PC-relative fields and pool alignment normalised): rows `norm` (identical), `norm-near`
 (register-exact ratio ≥ 0.90) and `norm-lead` (register-blind rank, a lead only). Tests: `LibSigNormalise`,
 `LibSigStock.test_norm`. Details: [LIBRARY_SIGNATURES.md](LIBRARY_SIGNATURES.md) §9.
+
+## Subsystem tags (2026-10-17)
+
+`python3 tools/dm32 tag [addr] [--csv out.csv] [--write-catalog]` (`tools/dm32re/tag.py`, needs binutils like `fn`)
+derives a subsystem lead for every unreviewed catalog function from task reachability (function pointers and handler
+tables included), strings, MMIO bases, RAM owners, reviewed and propagated callee/caller tags and the address
+neighbourhood; `--write-catalog` writes `auto: <tag>` into the subsystem column of rows above the threshold
+(confidence stays `unreviewed`). Method, thresholds and spot-check results: [SUBSYSTEM_TAGS.md](SUBSYSTEM_TAGS.md);
+CSV `analysis/decompiled_modules/subsystem_tags.csv`. Tests: `TagRules`, `TagStock`.
