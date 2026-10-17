@@ -483,4 +483,81 @@ addresses given.
 ### 15.3 Still not reviewed
 
 `0001D3E0`/`0001D4C4` (alg 2 body), `0001620C`/`0002E398` frame sources, `03010BD4` sector allocation, the
-`PCTESTM` sub-commands, load mode 4 of `03057790`, the `Call Log` writer.
+`PCTESTM` sub-commands, ~~load mode 4 of `03057790`~~ (§16.2), ~~the `Call Log` writer~~ (searched, not found: §16.3).
+The baseband side of `PCTESTM` (`030215C8`) is now in `HR_C7000_CROSSCHECK.md` §8.2.
+
+## 16. Sixth pass: data-flash areas, channel reload reasons, Call Log (2026-10-17)
+
+Inputs and tools as in `HR_C7000_CROSSCHECK.md` §0 (hashes re-checked 2026-10-15). Static only; no radio access.
+Method: every `bsr` to the area accessors `0300F594(area)` (handle), `0300F780`, `0300F878`, `0300FA28` in `flash.asm`
+was listed with the constant loaded into `r0` within the preceding 12 instructions (sites whose area comes from a
+register are not attributed); the readers below were then decompiled (`tools/dm32 decomp`) and checked against
+the literal pools.
+
+### 16.1 Data-flash area map (code-verified readers; roles labelled)
+
+| Area (`r0`) | Reader / writer (examples) | Content | Confidence |
+|---|---|---|---|
+| 2 | `03055B90` reads offset `0x20A` (2 bytes): value 1–15 (else 13) → `03065E58`, value 1–63 (else 39) → `03023028`, `0301E514(1)` | two bounded settings applied at boot | unreviewed role |
+| 3 | `03064D28` (`0x730`+7, `0x73A`+6), `03067618` (`0x30`+5, `0x3F`+2) | settings of the `0306xxxx` subsystem | unreviewed (GNSS/APRS inferred from the code region only) |
+| 4 | many (`SETTINGS_CPS_ANALYSIS.md` §1–§2); `0xF00` stun marker (`DATA_PATH_ANALYSIS.md` §4.4); `0xF01`/`0xF02` read by the boot channel restore `03058528` into `3E9D4+0x60/0x61` | general settings | code-verified |
+| 6 | `030615A8(kind, n, len, buf)`: kind 0 → offset `0x110`, 1 → `0x120`, 2 → 16-byte record `n`; `0306874C`: count at `0xA90` (≤ 64) | a 64-entry list of 16-byte records plus two fixed fields | unreviewed role |
+| 7, 8, 9 | Inbox / Outbox / Draft (`SETTINGS_CPS_ANALYSIS.md` §5); `03053B28` (boot) checks the marker byte at offset `0xFFF` (= area number) and formats the area if it differs | messages | code-verified |
+| 10 | `03053AF0`: count byte at offset 0 (≤ 20); same boot marker check (`0x0A`) | a 20-entry list in the message module | role inferred: quick texts |
+| 11 | `03033274`: count at offset 0 (≤ 800); `03033FFC`: list viewer, records indexed through a table at `(i+0x7F)·2`, format string `"Tx Contact %d/%d"` | **digital contacts** | code-verified (string) |
+| 15 | `030562C4` | RX group lists (§15) | code-verified |
+| 16 | `0305CDC4` (called by the channel loader `03057790` at `03058274`): when channel byte `+0x0E` ≠ 0, `+0x0F` bit 6 is set and the channel type nibble is 1 (digital), reads a `0x2C`-byte record at `0x300 + 0x2C·(n−1)`, `n = +0x0E`; byte 0 → `3F358+1` and `3F720+1` (key id), byte 11 → `33840` (key length, inferred), 32 bytes from offset 12 → `3F358+2` and `3F720+3`; then `0301F074(len, 33841, 10)` | **per-channel privacy key list** (key id + up to 32-byte key; fits AES-256) | structure code-verified; "key" inferred from `3F720` (privacy state, §15) |
+| 17 | `0302E1A4` and scanner code | scan lists | code-verified |
+| 18 (`0x12`) | `03058528` (boot): offset 0 = current channel number (≤ 4000) | channels (`CHANNEL_RECORD.md`) | code-verified |
+| `0x41` | `03057484(dst, b)`: 32 bytes at `0xFAF` (`b = 0`) or `0xFDF` (`b ≠ 0`), frequencies converted with `0305F904` like a channel record, copied to a `0x33`-byte channel buffer | two channel-like records | inferred: VFO A/B |
+| `0x5C`, `0x67` | `030567EC`, `03057620`: one byte at offset 0 | single values | unreviewed |
+| `0x65`, `0x66` | channel loader `03057790`, `03066608`, `0304E9FE`, … | | unreviewed |
+
+Consequence for the channel record (`SETTINGS_CPS_ANALYSIS.md` §3.2, `CHANNEL_RECORD.md`): bytes `+0x0E` (key index)
+and `+0x0F` bit 6 (enable) select an area-16 key, in addition to the block-4 key slot path through `+0x0C`/`+0x10`.
+Whether these are the CPS "enhanced" and "basic" privacy lists is **open** (qdmr comparison not done in this pass).
+
+### 16.2 Channel reload reason `3E335` = load mode of `03057790` (code-verified call sites; names from the side-key table)
+
+`03030560(r)` stores `r` in `3E335` (`3E334+1`, its only writer by `tools/dm32 acc`), sets `3E338` bit 2 and calls
+the event API `0300C494(3FDB0, 8)` and `…(3FDB0, 4, …)` (event semantics unreviewed); the channel/mode change path
+`03031FD4` passes `3E335` as the load mode: `030584E4(channel, 3E335)` at `030321AA` → `03057790(channel, mode)`
+(that `03031FD4` runs as a consequence of `03030560` is inferred). The constants
+passed to `03030560`, with the side-key handlers identified through the handler table `030728DC` (RAM copy
+`1800090C`) and the name table `030BB424`:
+
+| `r` | Callers (examples) | Meaning |
+|---|---|---|
+| 1 | `030151D0`, `0301683C`, `03036D5A`, `03039BE8` | normal channel change (inferred) |
+| 2, 3 | scanner `0302ECE8`, `0302F370` | scan step / stop (inferred from the scanner functions) |
+| **4** | `0305DD38`, reached from `0305E134` ← `03016EAC` ← side-key function 8 **`Alarm`** (`03016EB8`) | emergency alarm start: `03057790` then forces channel byte `+0x08` bits 2:1 (TX power) to 2 (`03057FAA…03057FB8`) — **an alarm transmission uses power level 2** (qdmr: high; inferred) |
+| 8 | 23 sites incl. side-key 32 `Switch ChType` (`03015CC0`) and analog Monitor `0301742C` (direct `030584E4(…, 8)`) | channel type / mode change |
+| 12 | side-key 4 `Digital Encrypt` (`03015E08`) | privacy toggle |
+| 13 | side-key 40 `Freq Search` (`030164BC`) | frequency search |
+| 16, 17 | side-key 3 `Talk Around` (`030161A0`), Other Func `Talk Around` (`03050022`, `03050036`) | talkaround on/off (`0x10` forces TX = RX in the loader, `SETTINGS_CPS_ANALYSIS.md` §3.2) |
+| 5, 9, 10, 18, 19, 21–23, 25–27 | various UI functions | unreviewed |
+
+`0305E134` also turns Monitor off (`0305CCF0(0)`, §RE_NOTES 2026-10-13) and stops the scanner before the alarm.
+TX/PTT behaviour is only documented here, not changed.
+
+### 16.3 Call Log writer (searched, not found — inferred absence)
+
+The Call Log menu is the main-menu entry `Call Log` (`030B8D8C` list) with sub-items `Missed`, `Answered`, `Sent`,
+`Delete` (lists `030B9030`/`030B9250`, descriptor `030B9050` used by `03036A20`, `0303864C`, `0303DBD4`, `0303ED96`,
+`0303EF3E`), and a `Missed Call` popup (`030BA748`, used by `03035D2C`). None of the area readers in §16.1 has a
+call-log record format, and the call-start/-end UI handlers `0305E3F0`, `0305E5E4`, `0305E654` call no area writer.
+So the call log is either kept in RAM only or written through a register-based area id that the constant search
+cannot attribute. Next step: decompile the three viewer entries above and follow their record source.
+
+### 16.4 Open questions (owner) and RX-only checks
+
+1. CPS (read only): which CPS list fills data-flash area 16 (key id + 32-byte key)? Compare a codeplug with one
+   AES-256 key entered against one without (PC-only file comparison).
+2. Does the Call Log survive a power cycle? (RAM-only vs flash, §16.3.) RX-only: receive a private call, power
+   off/on, open Call Log → Answered.
+3. Alarm power: not to be tested by transmitting; read the channel's power setting in CPS only.
+
+### 16.5 Not reviewed
+
+Areas 2, 3, 6, 10, `0x5C`, `0x65`–`0x67` roles; the Call Log record source; `03030560` reasons 5, 9, 10, 18–27;
+`0301F074`.
