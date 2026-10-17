@@ -43,7 +43,7 @@ Reading order for new work: AGENTS.md, this file, [RE_NOTES.md](docs/RE_NOTES.md
 | Receive path | [RX_CALL_PATH_ANALYSIS.md](docs/RX_CALL_PATH_ANALYSIS.md), [DATA_PATH_ANALYSIS.md](docs/DATA_PATH_ANALYSIS.md), [MONITOR_ANALYSIS.md](docs/MONITOR_ANALYSIS.md) |
 | Time slot / Colour Code | [TS_ANALYSIS.md](docs/TS_ANALYSIS.md), [CC_MATCH_ANALYSIS.md](docs/CC_MATCH_ANALYSIS.md) |
 | TS/CC Match design (design only, no image) | [MATCH_OPTIONS_DESIGN.md](docs/MATCH_OPTIONS_DESIGN.md) (site inventory, latest), [CC_MATCH_DESIGN.md](docs/CC_MATCH_DESIGN.md) |
-| Transmissions without PTT (summary) | [AUTONOMOUS_TX.md](docs/AUTONOMOUS_TX.md) |
+| Transmissions without PTT (summary) | [AUTONOMOUS_TX.md](docs/AUTONOMOUS_TX.md); every TX path with gates: [TX_PATHS.md](docs/TX_PATHS.md) |
 | Emergency alarm / Man Down | [ALARM_ANALYSIS.md](docs/ALARM_ANALYSIS.md) |
 | Alert tones | [AUDIO_TONES.md](docs/AUDIO_TONES.md) |
 | GNSS / NMEA | [GNSS_ANALYSIS.md](docs/GNSS_ANALYSIS.md) |

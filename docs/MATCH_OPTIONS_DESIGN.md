@@ -24,6 +24,12 @@ CPS/codeplug compatibility must stay unchanged.
 
 Open: whether CPS preserves bits 2–7 of block 4 `0x60` (owner read-only CPS check).
 
+Storage decision (2026-10-17, targeted review T2, `SETTINGS_CPS_ANALYSIS.md` §11): keep block 4 `0x60` bits 2/3 with
+`0 = stock`. In the firmware every writer of `0x60` is a read-modify-write and no other code reads bits 2–7, so the
+firmware itself never loses the bits; whether the PC CPS keeps them is not answerable from the firmware. If a CPS write
+clears them, both options silently return to stock behaviour (safe direction); the runtime copy `3BA6D` bits 5/6 is
+reloaded from `0x60` at boot by `0304B010`.
+
 ## 3. Site inventory (stock bytes; identical in the installed image `156a4872…`)
 
 Bytes are in image order (little-endian halfwords; 32-bit instructions are stored high halfword first).
@@ -343,6 +349,109 @@ are dormant in this build (inferred, absence of other writers). The Capacity-Plu
 
 Open questions for the owner: (1) should foreign-CC traffic count as "busy" for PTT (stock Monitor behaviour) or be
 invisible to TX (wrapper)? (2) should foreign-CC Idle bursts end a call (stock Monitor) — the proposal excludes them?
+
+### 3.10 Static review of new risks (2026-10-17, targeted review T3)
+
+Inputs as in `TX_PATHS.md` (hashes re-checked); `tools/dm32 callers/acc/fn`, Ghidra decompiler output with resolved
+literal pools, and a stack-depth scan (push register count plus `subi r14` per function, worst path over direct calls;
+calls through pointers are not followed, interrupt frames use the separate ISR stack `4B7E0`,
+`LIBRARY_SIGNATURES.md` §6). Static only; the design itself stays **inferred**.
+
+#### 3.10.1 Execution context and stack budget per site (code-verified callers; depths inferred from the scan)
+
+| Sites | Function | Only caller chain | Task (priority, stack) | Worst direct-call depth of the task | Note |
+|---|---|---|---|---|---|
+| T1, T2, C1, C5 | `03028644` | `030239D4` ← task `sysint` `0002D770` | `sysint` (17, 450 words = 1800 B) | 1080 B (via the voice-decrypt path `0002B30C` → `00015880` → vocoder IRAM) | ≈ 720 B margin; the caves are leaves except the B-Idle rule's `0300C724(4)` post |
+| T3, T4, C4 | `03028BE4` | `030239D4` | `sysint` | depth of `03028BE4` itself 136 B | large margin |
+| T8, C2 | `030282A4` | `03028644` | `sysint` | 152 B below `03028644` | — |
+| C3 | `03028180` | `03028644` | `sysint` | 132 B | — |
+| T5, T6 | `030239D4` call sites | task `sysint` | `sysint` | the wrapper frame adds to every path below it (keep ≤ 16 B) | see §3.10.2 |
+| T7 | `030207AA` | task `rxvoice` `030206D0` | `rxvoice` (24, 384 words = 1536 B) | 360 B | large margin |
+| T9 | `0305CB6C` | `0305C334` ← task `keys` `03012D2C` (event 8) | `keys` (7, 192 words = 768 B) | site at depth 96 B; **stock** worst static path 1224 B (`0305C334` → menu redraw `0303B6AC` → `sprintf` `030704C4`) | the static path exceeds the stack: either infeasible or a latent stock risk (inferred, not caused by the design); keep T9 a frameless leaf |
+| C6 | `0301E73C` (`0301E580`) | `03056330` ← channel loader `03057790` (main, `CodeSw`, `keys`, menu contexts), PCTESTM `030215C8`, menu `03038034` | several | `0301E580` depth 112 B | bit change only |
+| C7 | `0301EC40` | `0305CCF0` (Monitor key in `keys`, alarm entry), `03031FD4` (`CodeSw`) | several | small | bit change only |
+| T10 | `0302BB56` (`0302B9A4`) | `0302C200`, `0302C350` (UI) | UI | — | display only |
+
+**Resolved (code-verified callers):** every receive-gate site runs only in task `sysint`; no site runs in an ISR.
+
+#### 3.10.2 Shared variables, writers and pre-emption (code-verified accesses, `tools/dm32 acc`)
+
+| Variable | Writers (context) | Readers (context) |
+|---|---|---|
+| `3BEAA` (TX/admission slot) | dispatcher handlers `03027388`, `03027B9C`, `030280C0`, `030282A4`, `03028BE4`, `03024E7C`, `03023EB8` (`sysint`); slot lock `0002D500` (`txslot`); TS setter `0301ECC0` (menu task via `0304B158`); mode-4 setup `03024120` (channel apply) | `030237B8`, `03023AFC`, `03027320` (`CclTraffic`), `rxcsbk`, `03027388`, `03028644`, `03028BE4` |
+| `3BEAB` (RX activity) | handlers `03023EB8`, `03024E7C`, `03025480`, `03027584`, `030275F4`, `03027B9C`, `030280C0`, `03028180`, `030282A4`, `03028644`, `03028BE4` (`sysint`); RX reset `03023364` ← `03023394` (burst-loss timeout `0302343C` in `txslot`, `030234E8`, retune `03023C10`, `03024224`) | `030272EC` only (TX admit, `CclTraffic`) |
+| `3C61A` (last RX CC) | `03028644` (3 sites), `03028BE4` (`sysint`); `03029318` = `0xFF` (from `rxvoice` and from the RX reset in `txslot`) | CC gates in the handlers (`sysint`), `03027334` (`CclTraffic`), `03020D88` (home `CC:%d`) |
+| `3BEB8` (burst-loss timer) | cleared by 23 stores in the handlers (`sysint`), by `0002D7C8` (`txslot`) and `030294C8` (any TX producer), `03023364` | `0302343C` only (`txslot`, every tick) |
+| `3BEBD` (proposed captured-slot byte) | none | none (re-checked this pass) |
+
+`txslot` (priority 12) can pre-empt `sysint` (17); `rxvoice` (24), `CclTraffic` (22) and the UI tasks cannot. So the
+only concurrent writer during a handler is the `txslot` RX reset (`03023394` → `03023364` clears `3BEAB`/`3BEB8`/slot
+lock, `03029318` sets `3C61A = 0xFF`).
+
+**New risk R1 — wrapper restore after a concurrent RX reset (T5/T6, inferred design).** A wrapper that saves `3BEAB`/
+`3C61A` before the handler and restores them afterwards would undo a reset that `txslot` made in between, leaving a
+stale "busy" or a stale own CC (TX admit policy 1 would refuse, policy 2 would compare with an old value). Rule that is
+safe against the reset: restore `3BEAB` only as "saved == 0 and current ≠ 0 → write 0", and `3C61A` only when it still
+holds the burst's foreign CC; do both compare-and-write steps inside the CPU critical-section pair the firmware already
+uses (`CPU_SR_Save` `0001018C` / `CPU_SR_Restore` `0001019C`, used e.g. in `0300F878`, `0301C98C`). Status: **resolved by design rule** (code-verified writers;
+the rule is inferred).
+
+#### 3.10.3 Burst-loss timer `3BEB8` with TS Match off (code-verified stock behaviour)
+
+In `03028644`, mode 0 or 1, a BS-sourced burst on either slot clears `3BEB8` and sets `3BEAF` only while the repeater
+downlink is not yet seen (`3BEAF == 0`: stores at `030286DE`, `03028780`, the latter also posts `0x10000000`). After
+that, the slot gates T1 (`03028708`) / T2 (`030287B8`) drop other-slot bursts **before** any `3BEB8` store, and mode 0
+additionally needs slot lock `3BEB1` (`03028700`). So in stock only the programmed slot refreshes the timer; with TS
+Match off every admitted B burst refreshes the shared timer too. Consequence: a captured B call cannot time out while A
+carries traffic, which is why the B-Idle rule of §3.8.2 is needed (confirmed). Dropped B bursts (other data types) leave
+the cave before any timer store, as in stock. Status: **resolved** (code-verified mechanism).
+
+#### 3.10.4 Scanner, recording, Call Log (code-verified readers)
+
+- Scanner busy `0302ED04` (digital) → `0301ED00`: `3BA59` (TX/request state), `3C622` read as a halfword (data on
+  either slot), `3BA55` (call shown), `30E0C`; then hang state `3BA68`, `3E0E3` (call display), `3BA43` bit 1. A captured
+  B call sets `3BA55` through `rxvoice` and therefore stops the scan, as does a foreign-CC call with CC Match off — the
+  same reaction as stock Monitor. Status: resolved; owner preference in §3.8.6 stays.
+- Recording (`0302124C`) takes the caller IDs from the call descriptor `3BD48`, and the Call Log (`0302DF18` →
+  `03058B34`) from `3E0DC`, which `0305E3F0` fills from `3BD48`. With T7 (descriptor from the captured slot) both record
+  the B caller correctly. Status: resolved (data flow code-verified, design inferred).
+
+#### 3.10.5 CPU load with `cc_opt = 1` (inferred from code and datasheet)
+
+`cc_opt = 1` only lets foreign-CC frames raise `dll_frame_rx_interp`; the chip still delivers at most one frame per
+received 30 ms slot, as with stock Monitor, which already runs this way. The expensive part of `03028644` (the
+1080-B voice-decrypt path) runs only while `3F722` (decrypt active) is set, i.e. after a matching PI header (CC-checked,
+`03027598`) or a burst-F algorithm/key match (`03027628`). IRAM `0002D7C8` runs once per tick independently of
+`cc_opt` and writes `LOCAL_CC` bits 3:0 only in mode 4. The phy-RX handler `0002D374` (bit 11, a bit-error counter over a
+reference pattern table `030B0248`) does not touch the TS/CC variables. Status: **no new load class beyond stock
+Monitor** (inferred); owner check below.
+
+#### 3.10.6 Status of the items of `NEXT_AGENT_PROMPT.md` item 5
+
+| Item | Status |
+|---|---|
+| Execution context of every site | resolved (§3.10.1) |
+| Stack budget | resolved for `sysint`/`rxvoice`; `keys` has a stock static path above its stack (not caused by the design; open) |
+| Re-entrancy / shared variables | resolved with rule R1 (§3.10.2) |
+| Burst-loss timer | resolved (§3.10.3) |
+| Scanner, recording, Call Log | resolved (§3.10.4) |
+| CPU load with `cc_opt = 1` | inferred; owner RX-only test 1 below |
+
+#### 3.10.7 Owner RX-only tests (stock firmware)
+
+Disable first, as in `TX_PATHS.md` §7 (Lone Worker, Auto Roaming, VOX, beacon, alarm, analog decode responses; Rx Only
+channel where possible).
+
+| # | Test | Expected |
+|---|---|---|
+| 1 | Monitor on, on a busy repeater with a different CC, for several minutes | foreign voice without dropouts and normal key response (bounds the `cc_opt = 1` load) |
+| 2 | Scan a list containing a busy repeater whose traffic is only on the other slot | stock: scan does not stop (confirms §3.10.4 gate order) |
+| 3 | Receive a long call on the programmed slot while the other slot is idle | call ends with the terminator or about 13 ticks after the last burst (`3BEB8`) |
+
+#### 3.10.8 Left unreviewed
+
+The `keys` stack question above; IRAM vocoder functions on the decrypt path (`00016890`, `000182BC`, …); `0300C5E4`/
+`0300C550` (timer helpers of the mode-4 path); the 30 IRAM SPI/GPIO helpers listed by the reach scan but not on a site.
 
 ## 4. Code and RAM placement (constraints found)
 

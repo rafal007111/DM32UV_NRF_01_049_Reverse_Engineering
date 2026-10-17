@@ -32,6 +32,8 @@ The current Ghidra export has 2,171 function boundaries: 1,958 marked ok and 213
 | C runtime (libm, fdlibm) | 0306D7E0 asin, 0306DE28 sin, 0306DCBC cos, 0306E16C __ieee754_rem_pio2, 0306E57C/0306E6FC kernels, 0306DEE0 sqrt, 0306DD74 fabs, 0306DC14 ceil, 0306DD7C floor | Identified from fdlibm coefficient tables in initialised SRAM; used by GNSS position code. See docs/LIBRARY_SIGNATURES.md §8. |
 | uC/LIB | 0306BF08…0306C094 ASCII_*, 0306C254 Mem_Set, 0306C2C8 Mem_Clr, 0306C4F8 Mem_SegGetSizeRem, 0306C5BC Mem_PoolClr, 0306CDB8/0306CF54 Str_ParseNbr/FmtNbr_Int32, 0306D120…0306D520 Str_* | Present (POOL/HEAP tags, LIB_MEM_ERR codes) but no direct callers from vendor code. See docs/LIBRARY_SIGNATURES.md §7. |
 | RTOS kernel (uC/OS-III pre-V3.08, uC/CPU, port, BSP) | 00010D5C OSInit, 00010934 OSSched, 000108B0 OSIntExit, 00011148 OS_Sched0, 000116A4 OS_IntQRePost, 00012DD8 OSTaskCreate, 00013C6C OSTimeDly, 00013D60 OSTimeDlyHMSM, 00014128 OSTimeTick, 000105BE OSCtxSw, 0001064A interrupt entry, 0306D670 tick start and 150 more | All kernel rows named; 100 Hz tick, 64 priorities, 10-entry ISR post queue, mutexes present; task list with priorities and stacks. See docs/LIBRARY_SIGNATURES.md §5–§6. |
+| TS/CC Match site context (T3, 2026-10-17) | 030239D4, 03023880, 030239C4, 0002D374, 0300D41C, 0300D3EC, 03023364, 0302343C, 0301ED00 | Site execution contexts and stack budgets, shared-variable writers and pre-emption (rule R1), burst-loss timer, scanner busy fields, link-layer RX/TX RAM helpers. See docs/MATCH_OPTIONS_DESIGN.md §3.10. |
+| Transmit paths (T1, 2026-10-17) | 0305C334, 0305C1E0, 030149E8, 03014E38, 03014C38, 03014F54, 0305BE64, 030601CC, 03020FE4, 03020DC8, 0301EAE8, 0300D284, 0002B440, 0002B4A0, 0300E40C, 0300C304, 0002C83C, 03068D04, 03064830, 03064DBC, 0305DD38, 0305E134 | PTT → keyTime → keys → CclTraffic request funnel, digital RF keying by the HR_C7000 RF_TX/RF_RX interrupts and task rf, analog FM_PTT, analog signalling encoders/decoders with automatic acknowledgement, alarm CSBK bypassing TX admit. See docs/TX_PATHS.md. |
 | Recording/privacy/CPS words | 0302124C (task record, uncatalogued), 03010B40, 03061A44, 00014698, 000147AC, 0001CFAC, 0001D4B8, 00015880, 000160C0, 0302A9A8, 0302AA58, 030562C4 | Recording layout, RC4/AES structure, RTCITEM/PCTESTM, RX group list loader. See docs/RX_CALL_PATH_ANALYSIS.md §15. |
 
 Supporting Ghidra outputs are in analysis/reference. Targeted menu work is in analysis/ghidra_scripts and the earlier workspace's integration_review/menu_flow artifacts. The current source modules are in firmware/source.
@@ -64,6 +66,11 @@ rows (`tools/dm32` discovers them as `SUB_…`/`(new)`):
 | `0305490C` | task `ScanDisp` (created by `030545FC`): one tick per 100 main-loop steps; runs the GPS beacon, roaming trigger and Lone Worker timer | AUTONOMOUS_TX.md §2 |
 | `0001183C`, `00013C34`, `0306B1F8`, `0306BBD4`, `00010868` | uC/OS-III ISR Queue, Tick, Stat, Timer and Idle task entries | LIBRARY_SIGNATURES.md §6 (task list) |
 | `000133DC` | `OS_TaskReturn` (return address planted by `OSTaskStkInit`) | LIBRARY_SIGNATURES.md §6 |
+| `0301E924` | task `CclTraffic`: waits event 1 on `36F4C`, dispatches the request type `3BAB8` through table `030AEB34` (0–3 voice `03020FE4`, 4–9 CSBK `03020DC8`, 10 analog) | TX_PATHS.md §2 |
+| `03012D2C` | task `keys`: event 8 on `3A50C` → PTT handler `0305C334`, event `0x10` → TX stop `0305BE18` | TX_PATHS.md §2 |
+| `030151D0` | task `keyTime`: key-event block `307B8` bits → `03014C38` (PTT press) / `03014F54` (PTT release) | TX_PATHS.md §2 |
+| `0300DC94` | task `rf`: pends on `385AC`, digital RF TX on `0002B440` / off `0002B4A0` | TX_PATHS.md §1 |
+| `0002C404`, `0002C3D8` | HR_C7000 `RF_TX_INTERP` (vector 64) / `RF_RX_INTERP` (vector 65) ISRs: set `38480`/`38481`, post `385AC` | TX_PATHS.md §1 |
 | `0306D6EC` | tick ISR: clears timer 0 (`0x1400000C`), calls `OSTimeTick` | LIBRARY_SIGNATURES.md §6 |
 
 Uncatalogued library functions (inside catalog gaps, no Ghidra boundary; mutex, memory-partition, task-queue and
