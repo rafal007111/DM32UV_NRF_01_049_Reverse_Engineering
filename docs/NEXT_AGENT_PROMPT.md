@@ -4,7 +4,7 @@ Updated 2026-10-15 after the fifth pass (all six work items of the previous prom
 TS Match off design closure, CC Match off completeness, settings storage, remaining internals, catalog hygiene).
 Copy everything below the line into a new agent session on this repository.
 
-For finishing the library names and tagging subsystems (no TS/CC Match work) use [NEXT_AGENT_PROMPT_LIBS_TAGS.md](NEXT_AGENT_PROMPT_LIBS_TAGS.md) (done 2026-10-17); for the targeted review of TX/PTT, CPS/codeplug and baseband code use [NEXT_AGENT_PROMPT_TARGETED.md](NEXT_AGENT_PROMPT_TARGETED.md).
+For finishing the library names and tagging subsystems (no TS/CC Match work) use [NEXT_AGENT_PROMPT_LIBS_TAGS.md](NEXT_AGENT_PROMPT_LIBS_TAGS.md) (done 2026-10-17); for the targeted review of TX/PTT, CPS/codeplug and baseband code use [NEXT_AGENT_PROMPT_TARGETED.md](NEXT_AGENT_PROMPT_TARGETED.md) (done 2026-10-17, T2 partial); to finish T2 and the `keys` stack question use [NEXT_AGENT_PROMPT_T2.md](NEXT_AGENT_PROMPT_T2.md).
 
 ---
 
