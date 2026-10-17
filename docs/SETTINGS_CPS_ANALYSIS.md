@@ -167,6 +167,7 @@ confirms them.
 | `+0x04..+0x07` | | TX frequency; forced to RX when `+0x0A` bit 3 is set or the radio state `3E335 == 0x10` (talkaround), unless `+0x0A` bit 7 |
 | `+0x08` | 7:4 | channel type: 0 analog, 1 digital, 2/3 mixed types (setting `'D'`, menu `Channel Type`) |
 | `+0x08` | 3 | Rx Only (`0301EC1C` → `3BA6C` bit 1); forced on, with type 0, for frequencies in the AM window |
+| `+0x08` | 0 | Lone Worker on this channel (`ALARM_ANALYSIS.md` §3; toggled by side key `Work Alone`) |
 | `+0x08` | 2:1 | TX power (read by `0300DB48`); forced to `2` when the channel is loaded with mode argument 4 (`RX_CALL_PATH_ANALYSIS.md` §15) |
 | `+0x0A` | 7 | set by the loader when RX == TX (simplex) |
 | `+0x0A` | 6:4 | **TX admit policy** → `33CD0` (`MATCH_OPTIONS_DESIGN.md` §3.6) |

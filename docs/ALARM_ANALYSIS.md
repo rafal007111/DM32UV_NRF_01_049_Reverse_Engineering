@@ -32,19 +32,38 @@ So "Man down" in this build is an **alarm type selected by the emergency system*
 reaches stage 2 or 3 — stages that both the alarm start `0305DD38` and the received-CSBK alarm actions `0305EB8C` write —
 not an automatic fall detection.
 
-## 3. Lone Worker
+## 3. Lone Worker (code-verified flow; field names inferred)
 
-Other Func item 10 (`Lone Worker`) opens a submenu (`SETTINGS_CPS_ANALYSIS.md` §1.4); strings `Lone Work ON/OFF`
-(`030B9440/44`) and the softkey `Work Alone` (`030BB490`). Storage and timer logic **not reviewed** in this pass.
+| Item | Evidence |
+|---|---|
+| Global configuration | `03065478` (boot, from `0304AFE8`; also re-run by the CPS task `0302B340`, the stun entry `0305DFDC` and key handlers `03012F74`, `03013640`, `030151D0`) reads 4 bytes of data-flash area `0x10` at offset `0xB00`: byte 0 = 1 → `40110` bit 0 (enabled); byte 1 × 60 → `40112` (response time; minutes if the tick is 1 s, inferred); byte 2 → `40116` (reminder lead time); byte 3 bits 2:0 → `40110` bits 5:3 (mode) |
+| Per-channel flag | channel record `+0x08` **bit 0** (RAM `3E200` bit 0); side-key function 27 **`Work Alone`** (`03015FD4`, uncatalogued) toggles it in RAM **and in the stored channel record** (`0300F780`/`0300F878` at the record offset `+8`, or the VFO record in area `0x41`), with prompts `Lone Work ON`/`OFF` (descriptor pair `030B9448`) and tones `0x18`/`0x19`; refused (`0x21`) unless `40110` bit 0 is set and the channel is digital or mixed (`0002DED4` 1/3) |
+| User activity | `030654D8` clears the counter `40114` and bits 1/2 of `40110`; called from the key handlers above |
+| Timer | `030654F8`, called from the same periodic handler `0305490C` as the roaming trigger (`RX_CALL_PATH_ANALYSIS.md` §17) |
+
+`030654F8` runs only when the current channel (or the scanned channel during scan) has the Lone Worker bit, the
+feature is enabled, the radio is not stunned (`3BD6C` bit 0), no alarm is active (`3FD4C+1` bits 1:0), `0305DF8C()`
+is non-zero and `3FDD9` bit 0 is clear; otherwise it resets the counter. For digital/mixed channels it increments
+`40114` once per call and:
+
+- when `40114 ≥ 40112 − 40116` (mode 0) → tone `0x25` once (reminder);
+- when `40114 ≥ 40112` (mode 0): if the alarm is configured (`3FD4C+0x32 ≠ 0`) → **`03016EAC(3)`** → `0305E134(3)` → `0305DD38`, the entry
+  the side-key `Alarm` uses with source 1 (`03016EB8` → `03016EAC(1)`; it cancels a running alarm via `0305E314(1)` instead), i.e. **an emergency alarm is started
+  automatically** — an alarm transmits (§4, `RX_CALL_PATH_ANALYSIS.md` §16.2); otherwise tone `0x1B`;
+- mode 1 (`40110` bits 5:3 = 1): after expiry, every 5 calls `03065FF0` and the siren tones `0x2E`/`0x2F` (by
+  `40110` bits 7:6), until activity (inferred: local alert only).
+
+**TX relevance:** with Lone Worker enabled on a channel and an alarm configured, the radio can start an emergency
+alarm transmission by itself after the response time without a key press. Stock behaviour, documented only.
 
 ## 4. Open questions (owner) and checks without transmitting
 
 1. Does the radio have a tilt/motion sensor at all? Code: no sensor read tied to the Man Down setting was found.
 2. In CPS, which emergency-system field selects alarm type 5 ("Man Down")? (PC-only.)
-3. Do not trigger the Alarm side key for testing: an alarm transmits (channel reloaded with power level 2,
+3. Do not trigger the Alarm side key, and do not let a Lone Worker timer expire, for testing: an alarm transmits (channel reloaded with power level 2,
    `RX_CALL_PATH_ANALYSIS.md` §16.2).
 
 ## 5. Not reviewed
 
 `0305DA8C` field layout beyond `+0x3F`, the stage-1…6 actions (`0305E030`, `0305E0F4`, `0305E2C0`, `0305E314`,
-`0305E6DC`), alarm TX content, Lone Worker.
+`0305E6DC`), alarm TX content, the Lone Worker tick period and `03065FF0`, `0305DF8C`.

@@ -167,3 +167,9 @@ earlier today. Details: [RX_CALL_PATH_ANALYSIS.md](RX_CALL_PATH_ANALYSIS.md) §1
 read by its toggle (side-key `ManDown`), boot load and menus — no sensor logic found (inferred). The `Man down alarm!`
 screen is alarm stage 8, reached when the channel's emergency system has alarm type 5 when an alarm (user-started or received) reaches stage 2/3.
 Details: [ALARM_ANALYSIS.md](ALARM_ANALYSIS.md).
+
+2026-10-17 Lone Worker (static): configuration in data-flash area `0x10` offset `0xB00` (enable, response time,
+reminder, mode), per-channel flag = channel record `+0x08` bit 0 (toggled and stored by side-key `Work Alone`
+`03015FD4`); the timer `030654F8` counts inactivity, plays a reminder tone and on expiry calls the same alarm entry as
+the side-key `Alarm`, i.e. it can start an emergency alarm transmission without a key press (code-verified call;
+TX inferred from the alarm path). Details: [ALARM_ANALYSIS.md](ALARM_ANALYSIS.md) §3.
