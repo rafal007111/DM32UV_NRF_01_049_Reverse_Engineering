@@ -231,3 +231,26 @@ Static only, same inputs/tools as T1. No radio access, no image written.
   compare-and-write inside `CPU_SR_Save`/`Restore`. Burst-loss timer, scanner, recording and Call Log interactions are
   code-verified; `cc_opt = 1` adds no load beyond stock Monitor (inferred). New registers in
   [HR_C7000_CROSSCHECK.md](HR_C7000_CROSSCHECK.md) §9 (`FM_PTT`, `INTERP_CLEAR`, TX/RX link RAM). 11 catalog rows.
+
+### Targeted review T2b and S: CPS protocol and the keys stack (2026-10-17)
+
+- T2b ([CPS_PROTOCOL.md](CPS_PROTOCOL.md)): completed the USB CPS protocol left partial in
+  [SETTINGS_CPS_ANALYSIS.md](SETTINGS_CPS_ANALYSIS.md) §3/§11. Two distinct frame loops: `PROGRAM` `0302A448`
+  (6-byte header, 24-bit LE address, `S`/`G` = program flash write/read at `0x0300B000+addr`, `W`/`R`/`D` = external
+  SPI data flash write/read/erase, `V` info; ends in a restart) and `SYSINFO` `03029FB0` (packed `a0<<12|a1<<8|a2`
+  address + `0xFF000` window, `S`/`G` program flash, `C` write to the `0x10C` record, `V`; no restart). Flash helpers
+  pinned (program: `0002C164`/`0002C0FC`/`0002C0E4`; data flash: `0002BAB0`/`0002B9A0`/`0300F700`/`03067474`,
+  sector = `addr>>12`). No read-back/verify; whole 4 KiB data-flash sectors (incl. the `0xFFF` area-marker byte) are
+  rewritten; firmware-side saves are copy-on-write. Data-flash logical areas resolved via `0300F594`/`0300F364`
+  (per-sector `0xFFF` marker directory). `PCTESTM` `0302AA58` + `030215C8` keys the transmitter for its TX-group
+  sub-commands (bypasses PTT/Rx-Only/TOT) and persists calibration to data-flash area 2. 14 catalog rows (the
+  `0302A448` role was corrected — it wrongly said `V/C/S/G`).
+- S ([MATCH_OPTIONS_DESIGN.md](MATCH_OPTIONS_DESIGN.md) §3.10.9): resolved the `keys`-task stack question. Measured
+  frames + a direct-call scan give ~1180 B with the float `printf` subtree (`__dtostr`/`__muldf3`/`__pack_d`, reached
+  only for `%e/%f/%g`) and ~844 B without; the deepest menu-redraw `sprintf` (`03019800`) uses the integer frequency
+  format `"%03d.%05d"`, so the float subtree is off this path. Verdict: a loose static over-approximation over
+  branch-exclusive, scene-selected edges, most likely infeasible/benign in stock (owner-confirmed working firmware),
+  not provable infeasible statically, not caused by the design. Stock has `OSTaskStkChk`/`OSTaskSwHook` with a 12-word
+  limit but no hardware trap on CK803S, so a transient single-slice overflow would not be reliably caught. T9
+  (`0305CB6C`) must stay a frameless leaf (0 B added).
+- Static analysis only: no serial port opened, no CPS word sent, no radio access, no image file written.
