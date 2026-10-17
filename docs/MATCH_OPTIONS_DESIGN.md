@@ -30,6 +30,11 @@ firmware itself never loses the bits; whether the PC CPS keeps them is not answe
 clears them, both options silently return to stock behaviour (safe direction); the runtime copy `3BA6D` bits 5/6 is
 reloaded from `0x60` at boot by `0304B010`.
 
+T2b confirms this choice (`CPS_PROTOCOL.md` §5): the CPS `W` write rewrites whole 4 KiB data-flash sectors, so a
+CPS write preserves `0x60` bits 2/3 only if the PC software writes them back unchanged — unknown statically, hence
+the `0 = stock` safe direction. A mod must not change the CPS session code (`0302B340`, `0302A448`, `03029FB0`) or
+the area layout, or the official CPS could stop reading/writing the codeplug correctly.
+
 ## 3. Site inventory (stock bytes; identical in the installed image `156a4872…`)
 
 Bytes are in image order (little-endian halfwords; 32-bit instructions are stored high halfword first).

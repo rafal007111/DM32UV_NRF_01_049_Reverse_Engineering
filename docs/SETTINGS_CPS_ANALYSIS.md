@@ -115,6 +115,12 @@ would silently reset the options but would not break anything else.
 
 ## 3. CPS USB protocol (frame loop `03029FB0`/`0302A448`, task `usb` entry `0302B340`; code-verified)
 
+> **2026-10-17 (T2b):** the complete, re-checked protocol is now in **`CPS_PROTOCOL.md`**. The table below documents
+> the **`SYSINFO`** loop (`03029FB0`). The **`PROGRAM`** loop (`0302A448`) has a *different command set* (`S`/`G`
+> program flash, `W`/`R`/`D` data flash, `V` info) and a *different 24-bit little-endian address encoding*; see
+> `CPS_PROTOCOL.md` §2. Where this section and `CPS_PROTOCOL.md` differ on the `PROGRAM` loop, `CPS_PROTOCOL.md`
+> wins.
+
 Entry handshake words at `030B08AC` (`PROGRAM`, `PON-PIC`, `PSEARCH` → answer `DP570UV`, `PASSSTA`,
 `PASWORD`, `PCTESTM`, `RTCITEM`, `DEL-RCD`, `IDCHECK`, `SYSINFO`) with handlers at `030B0860`; password check in
 `0302B224`. Inside a session, receive timeout 2000 ms (`0x72D9` = timeout status):
@@ -335,12 +341,14 @@ the editors that `03059C14(n)` sets up store the maximum length `n` in `18000ABC
 `0x67` reader `03057620` (role); Display Func storage of the four items not in the manual; the getter id `0x30`
 caller and what it would control.
 
-## 11. Codeplug compatibility rules for mods (2026-10-17, targeted review T2, partial)
+## 11. Codeplug compatibility rules for mods (2026-10-17, targeted review T2/T2b)
 
-Static only. This pass did not produce a new CPS command table (`CPS_PROTOCOL.md` was not written). The frame
-table in §3 is incomplete for the `PROGRAM` session (`0302A448`): a later read of that loop found more frame types than
-§3 lists and a different address encoding from the `SYSINFO` loop `03029FB0`; those details were not documented in
-this pass and §3 must be re-checked before anyone relies on it.
+Static only. **Update (T2b, 2026-10-17):** the full CPS command tables, the `PROGRAM`-vs-`SYSINFO` loop difference,
+the program-flash vs data-flash write semantics, the data-flash area map and the compatibility rules now live in
+**`CPS_PROTOCOL.md`** (§2 frame tables, §4 address map, §5 rules). The caveat this section originally raised — that
+the `PROGRAM` loop `0302A448` has more frame types and a different address encoding than the §3 `SYSINFO` table — is
+resolved there: `PROGRAM` uses `S`/`G` (program flash) + `W`/`R`/`D` (data flash) with a 24-bit LE address. The rules
+below are retained as the short form; `CPS_PROTOCOL.md` §5 is authoritative.
 
 What the firmware answers (code-verified, earlier sections):
 
@@ -373,5 +381,7 @@ radio, read → file C, and confirm that only area 4 byte `0x60` bit 0 differs f
 Open questions for the owner: which CPS version is used, and is its codeplug file format documented anywhere (a raw
 image of area 4 would make the check above a pure file comparison)?
 
-Left unreviewed: the complete `PROGRAM` frame table, the read/write address map of the CPS session and the
-CPS-tagged helper functions (`0002BAB0…0002C164`, `0301C8E0…0301C98C`, `03066F70…030674F0`).
+Left unreviewed (narrowed by T2b): the PC CPS software and codeplug file format; the `0x10C` record (`0301C98C`),
+`RTCITEM` (`0302A9A8`), and the `0002C0FC` per-sector erase address plumbing; CPS-tagged helpers off the frame
+paths. The `PROGRAM` frame table, the program-flash/data-flash write semantics and the address map are now in
+`CPS_PROTOCOL.md` (§2, §4).
