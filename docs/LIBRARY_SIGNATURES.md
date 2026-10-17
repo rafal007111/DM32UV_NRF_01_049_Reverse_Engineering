@@ -294,6 +294,54 @@ Identified (code-verified by constants and call structure): the block is the ven
 - Left unreviewed: `0306E0BC` (remainder-like helper, calls `0306E88C`; norm lead `_rem`), `0306E88C`
   (`fmod`-like; `7FF00000`/`FFF00000` tests).
 
+## 9. Normalised comparison (`libsig --norm`) and the C runtime leftovers (2026-10-17)
+
+`python3 tools/dm32 libsig --norm` (pure Python, < 10 s) adds a pass over the library block `0306D7E0…03072800`
+that compares instruction tokens after normalising the vendor encodings (`norm_tokens`, `norm_insn` in
+`tools/dm32re/libsig.py`):
+
+- 16-bit three-operand `addu`/`subu` (`0x58xx…0x5Fxx`) with `rz == rx` (or `rz == ry` for `addu`) become the
+  two-operand form `0x6000 | rz << 6 | rx << 2 (| 2 for subu)`, the only form V3.10.29 emits;
+- a leading run of `zextb`/`zexth`/`sextb`/`sexth rx, rx` is dropped;
+- PC-relative fields (`br/bt/bf` 16/32, `bez…bhsz`, `bsr32`, `lrw16/32`, `jsri`, `jmpi`) are masked, literal
+  pools become data tokens (relocated words match any value), and an alignment filler before a pool is dropped
+  (pool alignment depends on the absolute address, so the reference uses its section offset);
+- `norm` = identical token streams over the whole function (register-exact) → evidence for `high`;
+  `norm-near` = register-exact difflib ratio ≥ 0.90; `norm-lead` = best register-blind candidate (register fields
+  of the common formats cleared) with ratio ≥ 0.25 and ≥ 0.03 ahead of any other name — a rank, never a name by
+  itself.
+
+Results (CSV regenerated with `--norm`: `analysis/decompiled_modules/libsig_thead_matches.csv`, 64 rows; the
+default run without `--norm` is unchanged):
+
+| Address | Before | Now |
+|---|---|---|
+| `0307050C` malloc, `03070C08` memset, `03070E24` isspace, `0307183C` strtoul | near (0.97/0.99/0.90/0.99) | **norm** (identical after normalisation) → catalog `high` |
+| `03070918` strtol | near 0.94 | norm-near 0.98 (one register choice differs) |
+
+The other vendor library functions differ in register allocation and instruction selection, so their register-blind
+ratios stay at 0.25–0.73: the vendor release is not a re-encoding of V3.10.29 but a different compiler build.
+`norm-lead` ranks were checked against constants and call structure: of 36 leads, the name is confirmed for the
+soft-float operators and `strtod`, but four are wrong (`0306D7E0` → `__kernel_tan`, really `asin`; `0306E6FC` →
+`__kernel_sin`, really `__kernel_cos`; `0306DE28` → `cos`, really `sin`; `0306EB40` → `__strcpy_chk`, really
+`__fixunsdfsi`), which is why a lead alone never names a row. Host tests: `LibSigNormalise` (pure encodings) and
+`LibSigStock.test_norm` (the four `norm` rows and strtol).
+
+Named from structure plus leads (`C runtime (T-HEAD minilibc/libgcc)`, 43 rows: 22 medium, 21 low; evidence per row):
+single precision `__addsf3`/`__subsf3` `0306ECBC`/`0306ECF0`, `__mulsf3` `0306ED30`, `__divsf3` `0306EE44`,
+`_fpadd_parts` `0306EB7C`, `__floatsisf` `0306EFB0`, `__floatunsisf` `0306F090`, `__fixsfsi` `0306F004`,
+`__fixunssfsi` `0306EB10`, `__extendsfdf2` `0306F064`, `__gesf2` `0306EF70`, `__pack_f`/`__unpack_f`
+`0306FDDC`/`0306FEB8`, `__fpcmp_parts_f` `0306FF5C`; double precision `__adddf3`/`__subdf3` `0306F458`/`0306F494`,
+`__muldf3` `0306F4DC`, `__divdf3` `0306F784`, `_fpadd_parts` `0306F10C`, `__floatsidf` `0306FAEC`, `__fixdfsi`
+`0306FB70`, `__fixunsdfsi` `0306EB40`, `__truncdfsf2` `0306FC1C`, `__make_dp` `0306FBF4`, `__gedf2` `0306FA10`,
+`__pack_d`/`__unpack_d` `03070000`/`030702FC`, `__fpcmp_parts_d` `030703D0`, six comparisons whose operator is not
+determined (`0306EF30`, `0306F97C`, `0306F9C4`, `0306FA5C`, `0306FAA4`, `03072780`); 64-bit shifts `03070474`/
+`0307049C`; `strtod` `030706E4`; `vsnprintf` `03070E90` (low → medium); printf core `03070EF0`, `__dtostr`-like
+`03071950`, `__lltostr`-like `03071DE4`, 64-bit division helpers `03071FE0`/`030723BC` (low).
+
+Left unreviewed in the C runtime: `0306FC60` (calls `__pack_d` three times), `0306FD70` (helper of the multipliers),
+`03070698`, `03071834`, `03071D90`, `03071DB0` (`__isinf` lead), `03071EA4`.
+
 ## Open questions for the owner
 
 - None blocking. If the vendor toolchain release becomes known (CDK project files, an SDK in the update package),

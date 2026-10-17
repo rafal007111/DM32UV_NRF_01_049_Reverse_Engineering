@@ -161,6 +161,49 @@ class LibSigDecoding(unittest.TestCase):
         self.assertIsNone(libsig.bsr32_target(bytes.fromhex("14d06ccb"), 0, 0x100))
 
 
+class LibSigNormalise(unittest.TestCase):
+    """No firmware needed: vendor versus V3.10.29 encodings (LIBRARY_SIGNATURES.md 9)."""
+
+    def test_three_operand_addu_subu(self):
+        from dm32re.libsig import norm_insn
+        # stock 0001393A "addu r1, r1, r2" (5928) == as 2.42 "addu16 r1, r1, r2" -> 6048
+        self.assertEqual(norm_insn(0x5928), norm_insn(0x6048))
+        # stock 000101AC "subu r0, r0, r3" (580D) == two-operand subu r0, r3 (600E)
+        self.assertEqual(norm_insn(0x580D), norm_insn(0x600E))
+        # stock 00010AD8 "addu r2, r3, r2" (5B48): commutative, == addu r2, r3 (608C)
+        self.assertEqual(norm_insn(0x5B48), norm_insn(0x608C))
+        # distinct registers stay three-operand; subu is not commutative
+        self.assertEqual(norm_insn(0x5A2D), (2, 0x5A2D))  # subu r1, r2, r3
+        self.assertEqual(norm_insn(0x5B01), (2, 0x5B01))  # subu r0, r3, r0
+
+    def test_pc_relative_fields_masked(self):
+        from dm32re.libsig import norm_insn
+        self.assertEqual(norm_insn(0x041F), norm_insn(0x0401))  # br16
+        self.assertEqual(norm_insn(0xE800, 0x001C), norm_insn(0xE800, 0x0100))  # br32
+        self.assertEqual(norm_insn(0xE903, 0x0016), norm_insn(0xE903, 0x0002))  # bez r3
+        self.assertNotEqual(norm_insn(0xE903, 0x0016), norm_insn(0xE904, 0x0016))  # bez r4
+        self.assertEqual(norm_insn(0xE000, 0x000A), norm_insn(0xE3FF, 0xFABA))  # bsr32
+        self.assertEqual(norm_insn(0x1065), norm_insn(0x1061))  # lrw16 r3, offset differs
+        self.assertNotEqual(norm_insn(0x1065), norm_insn(0x1045))  # lrw16 r2
+
+    def test_leading_self_extension_dropped(self):
+        from dm32re.libsig import norm_tokens
+        rts, zextb_r1 = b"\x3c\x78", b"\x44\x74"  # 783C rts, 7444 zextb r1, r1
+        self.assertEqual(norm_tokens(zextb_r1 + rts), norm_tokens(rts))
+        self.assertNotEqual(norm_tokens(rts + zextb_r1), norm_tokens(rts))  # only at the start
+
+    def test_pool_alignment(self):
+        from dm32re.libsig import norm_compare, norm_tokens
+        word = b"\x78\x56\x34\x12"
+        a = norm_tokens(b"\x61\x10" + b"\x3c\x78" + word, base=0)  # lrw16 r3 -> pool at 4; rts
+        b = norm_tokens(b"\x62\x10" + b"\x3c\x78" + b"\x03\x6c" + word, base=2)  # pool at 8, filler at 6
+        self.assertEqual(a, b)
+        self.assertEqual(a[-1], ("D", 0x12345678))
+        ref = norm_tokens(b"\x61\x10" + b"\x3c\x78" + word, mask=b"\x01" * 4 + b"\x00" * 4)
+        self.assertEqual(ref[-1], ("D", None))  # relocated pool word matches any value
+        self.assertTrue(norm_compare(ref, a)[0])
+
+
 @unittest.skipUnless(HAVE_THEAD, "pinned T-HEAD toolchain missing (tools/setup_cloud.sh --with-thead)")
 class LibSigReference(unittest.TestCase):
     def test_malloc_free_relocations(self):
@@ -197,6 +240,16 @@ class LibSigStock(unittest.TestCase):
         self.assertIn("malloc.o:F", self.rows[0x18000C30].names)
         self.assertIn("__malloc_lock", self.rows[0x0004A7D0].names)
         self.assertGreaterEqual(self.rows[0x03070E44].agree, 1)  # os_critical_enter called from free
+
+    def test_norm(self):  # LIBRARY_SIGNATURES.md 9: identical after normalisation
+        from dm32re import catalog, libsig
+        rows = {m.va: m for m in libsig.norm_pass(image.Image("stock"), libsig.load_reference(THEAD),
+                                                    catalog.load(), 0x03070500, 0x03071900, set())}
+        for va, name in [(0x0307050C, "malloc"), (0x03070C08, "memset"), (0x03070E24, "isspace"),
+                         (0x0307183C, "strtoul")]:
+            self.assertEqual((rows[va].method, name in rows[va].names), ("norm", True))
+        self.assertEqual(rows[0x03070918].method, "norm-near")  # strtol, ratio 0.98
+        self.assertIn("strtol", rows[0x03070918].names)
 
     def test_near(self):
         self.assertIn("malloc", self.rows[0x0307050C].names)

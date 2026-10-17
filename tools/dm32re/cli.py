@@ -226,6 +226,8 @@ def main(argv=None):
     s.add_argument("--csv", help="write all rows to this CSV")
     s.add_argument("--all", action="store_true", help="also print short and lead rows")
     s.add_argument("--no-near", action="store_true", help="skip the near (similarity) pass")
+    s.add_argument("--norm", action="store_true",
+                   help="also compare the library block after normalising vendor encodings (slower)")
     a = p.parse_args(argv)
     if a.cmd == "libsig":
         from . import libsig
