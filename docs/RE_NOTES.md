@@ -173,3 +173,5 @@ reminder, mode), per-channel flag = channel record `+0x08` bit 0 (toggled and st
 `03015FD4`); the timer `030654F8` counts inactivity, plays a reminder tone and on expiry calls the same alarm entry as
 the side-key `Alarm`, i.e. it can start an emergency alarm transmission without a key press (code-verified call;
 TX inferred from the alarm path). Details: [ALARM_ANALYSIS.md](ALARM_ANALYSIS.md) §3.
+
+2026-10-17 summary of every stock path that can transmit without PTT (CSBK/data replies, roaming wake-ups, Lone Worker alarm, alarm): [AUTONOMOUS_TX.md](AUTONOMOUS_TX.md).
