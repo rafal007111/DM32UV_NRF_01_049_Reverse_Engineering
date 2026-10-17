@@ -254,6 +254,46 @@ Prior docs called `0302DF18` "the UI task"; its name string is `task CallDisp`. 
 `0306AB78`, `OSQDel` `0306ADC4`, `OSStatTaskCPUUsageInit` `0306B560`, `OSTmrRemainGet` `0306B6D0` (tag `TMR `,
 29501…29507), `CPU_NameGet`/`CPU_NameSet` `00010298`/`0001030C`, CPU count-zeros variants `00010434…000105A8`.
 
+## 7. uC/LIB and uC/CPU: presence established, 15 uC/LIB rows (2026-10-17)
+
+uC/LIB is present (code-verified): `Mem_SegGetSizeRem` `0306C4F8` and `Mem_PoolClr` `0306C5BC` use the uC/LIB
+memory-type tags `POOL` (`4C4F4F50`), `HEAP` (`50414548`), `NONE` and the `LIB_MEM_ERR_*` codes 10000…10135, call
+`CPU_SW_Exception` (`000101B4`, endless loop) on a NULL error pointer, and use the heap segment `Mem_PoolHeap`
+(`454EC`); `Mem_Clr` `0306C2C8` is called by `CPU_NameClr` `00010348` with `CPU_Name` (`4564C`, 16 bytes). The API
+shape (`Mem_SegGetSizeRem`, `Mem_PoolBlk*`) suggests an older uC/LIB release than the public reference (inferred).
+Named: `ASCII_IsAlphaNum/IsLower/IsDig/IsDigHex/IsSpace/IsPrint/ToLower` `0306BF08…0306C094` (character ranges and
+call positions inside `Str_ParseNbr_Int32` `0306CDB8`, `Str_FmtNbr_Int32` `0306CF54`, `Str_CmpIgnoreCase_N`
+`0306D318`), `Mem_Set` `0306C254`, `Mem_SegCalcTotSize` `0306C12C` (low); 15 rows (14 medium, 1 low). uC/CPU
+(11 rows, counted in section 6): interrupt-disable measurement
+getters `000101A4…00010224`, `CPU_CntLeadZeros32` `000103E0` (table `03076BD4`) and its wrapper `CPU_CntLeadZeros`
+`0001042C` (resolves the section 5 lead), `CPU_TS_TmrFreqSet` `000101E8`, `CPU_TS_TmrInit` `0306D694`.
+
+The section 4 byte hits of `ASCII_ToLower` inside `0306C094` were accidental as a byte match, but the function itself
+is `ASCII_ToLower` in the vendor encoding (`zextb`, range check, `+32`).
+
+No direct call from vendor code into uC/LIB was found: the `Str_*` and `Mem_*` functions have no callers outside the
+library and the CPU name functions, so uC/LIB is linked but essentially unused (inferred; calls through pointers
+are not tracked).
+Uncatalogued uC/LIB functions (leads): `Mem_HeapAlloc` `0306C42C`, `Mem_PoolCreate` `0306C608`,
+`Mem_PoolBlkGetNbrAvail` `0306C9B8`, `Mem_PoolBlkGet` `0306CA10`, `Mem_PoolBlkGetUsedAtIx` `0306CAD4`,
+`Mem_PoolBlkFree` `0306CB80`, `Mem_PoolBlkIxGet` `0306CC94`, `Str_Str` `0306D5A8`, `Str_FmtNbr_Int32U/S` `0306D5B4`/
+`0306D5E0`, `Str_ParseNbr_Int32U/S` `0306D61C`/`0306D630`, further `Str_*` in `0306D154…0306D23C`.
+
+## 8. Block `0306D800–0306F97C`: fdlibm libm and libgcc fp-bit soft-float (2026-10-17)
+
+Identified (code-verified by constants and call structure): the block is the vendor build of the toolchain's libm
+(fdlibm) and of libgcc's `fp-bit` soft-float, linked between uC/LIB and the minilibc block.
+
+- libm (`C runtime (libm, fdlibm)`, 10 rows: 7 high, 3 medium): `asin` `0306D7E0` (coefficients pS0…pS5/qS1…qS4, `pio2_hi/lo`, `pio4_hi`
+  in initialised SRAM `18000C38…18000CB0`), `sin` `0306DE28` and `cos` `0306DCBC` (π/4 test `3FE921FB`, then
+  `__ieee754_rem_pio2` and the `n & 3` switch over the kernels), `__ieee754_rem_pio2` `0306E16C` (`pio2_1…pio2_3t`,
+  `invpio2`), `__kernel_sin` `0306E57C` (S1…S6), `__kernel_cos` `0306E6FC` (C1…C6), `sqrt` `0306DEE0`, `fabs`
+  `0306DD74`, `ceil` `0306DC14`, `floor` `0306DD7C`. Callers: the GNSS position code (`03062E98`, `03063878`,
+  `03063960`, `03063EA4`; purpose not reviewed) and `0305FD98`, `030676CC`.
+- soft-float (section 9) `0306EB10…0306FFE8` and `03070000…030703D0`.
+- Left unreviewed: `0306E0BC` (remainder-like helper, calls `0306E88C`; norm lead `_rem`), `0306E88C`
+  (`fmod`-like; `7FF00000`/`FFF00000` tests).
+
 ## Open questions for the owner
 
 - None blocking. If the vendor toolchain release becomes known (CDK project files, an SDK in the update package),
