@@ -146,3 +146,8 @@ Details: [GNSS_ANALYSIS.md](GNSS_ANALYSIS.md).
 2026-10-17 alert tones (static): code-verified tone engine `03021C1C` → task `03022FB0` → `03022410`; Radio Silent lets
 only the power-on melody `0x0F` and the looped sample sound `0x16` through; key/refusal beeps are dropped during a
 received-call display; tone id table with callers. 5 catalog rows updated. Details: [AUDIO_TONES.md](AUDIO_TONES.md).
+
+2026-10-17 roaming storage (static): data-flash area `0x65` holds the roaming zones (header, current zone, 0x21-byte
+zone records) and `0x66` the roaming channels (0x1A-byte records), loaded at boot by `03066424`, which reformats them
+with `Roam Zone 1`/`Roam Channel 1` defaults; `3E9D4+0x30` bit 6 selects English (1) vs Chinese (0). The roaming
+decision logic is unreviewed. Details: [RX_CALL_PATH_ANALYSIS.md](RX_CALL_PATH_ANALYSIS.md) §16.1.
