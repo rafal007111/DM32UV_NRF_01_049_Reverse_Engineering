@@ -297,7 +297,7 @@ export and with a constant back-tracker over the disassembly; RAM accesses with 
 ### 9.5 Not reviewed
 
 ~~The `0x50` editor's length bound~~ (writer unreachable, §10.1); Display Func storage for the four items missing from the manual; the `Call Log`
-writer (searched, `RX_CALL_PATH_ANALYSIS.md` §16.3); ~~`3EA06` bit 7 and bits 0/1~~ (§10.2).
+writer (found: `RX_CALL_PATH_ANALYSIS.md` §16.3); ~~`3EA06` bit 7 and bits 0/1~~ (§10.2).
 
 ## 10. Sixth pass: the `0x50` writer and `3EA06` (2026-10-17)
 

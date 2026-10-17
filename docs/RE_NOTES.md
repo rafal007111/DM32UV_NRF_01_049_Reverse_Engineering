@@ -157,3 +157,8 @@ ticks, skipped on Rx Only channels and while scanning) and search `03066608`; ea
 which accepts it at once when the repeater downlink is already received and otherwise sends up to three repeater
 wake-ups (`03029C3C`, a transmission) waiting 300 ms each for the downlink event. Details:
 [RX_CALL_PATH_ANALYSIS.md](RX_CALL_PATH_ANALYSIS.md) §17.
+
+2026-10-17 correction: the Call Log **is** stored in data flash. The UI task `0302DF18` logs calls with `03058B34(kind)`
+into areas `0x0C`/`0x0D`/`0x0E` (area id from the table `030B24F0`, missed by the constant search), 20 × 14-byte records
+(ID, RTC time, duration) per kind; mapping of kinds to Missed/Answered/Sent inferred. Supersedes "searched, not found"
+earlier today. Details: [RX_CALL_PATH_ANALYSIS.md](RX_CALL_PATH_ANALYSIS.md) §16.3.

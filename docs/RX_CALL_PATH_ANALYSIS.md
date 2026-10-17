@@ -483,7 +483,7 @@ addresses given.
 ### 15.3 Still not reviewed
 
 `0001D3E0`/`0001D4C4` (alg 2 body), `0001620C`/`0002E398` frame sources, `03010BD4` sector allocation, the
-`PCTESTM` sub-commands, ~~load mode 4 of `03057790`~~ (§16.2), ~~the `Call Log` writer~~ (searched, not found: §16.3).
+`PCTESTM` sub-commands, ~~load mode 4 of `03057790`~~ (§16.2), ~~the `Call Log` writer~~ (§16.3).
 The baseband side of `PCTESTM` (`030215C8`) is now in `HR_C7000_CROSSCHECK.md` §8.2.
 
 ## 16. Sixth pass: data-flash areas, channel reload reasons, Call Log (2026-10-17)
@@ -506,6 +506,7 @@ the literal pools.
 | 7, 8, 9 | Inbox / Outbox / Draft (`SETTINGS_CPS_ANALYSIS.md` §5); `03053B28` (boot) checks the marker byte at offset `0xFFF` (= area number) and formats the area if it differs | messages | code-verified |
 | 10 | `03053AF0`: count byte at offset 0 (≤ 20); same boot marker check (`0x0A`) | a 20-entry list in the message module | role inferred: quick texts |
 | 11 | `03033274`: count at offset 0 (≤ 800); `03033FFC`: list viewer, records indexed through a table at `(i+0x7F)·2`, format string `"Tx Contact %d/%d"` | **digital contacts** | code-verified (string) |
+| `0x0C`, `0x0D`, `0x0E` | `03058B34(kind)` via the table `030B24F0` | **Call Log** kinds 1–3, 20 × 14-byte records each (§16.3) | code-verified layout; kind names inferred |
 | 15 | `030562C4` | RX group lists (§15) | code-verified |
 | 16 | `0305CDC4` (called by the channel loader `03057790` at `03058274`): when channel byte `+0x0E` ≠ 0, `+0x0F` bit 6 is set and the channel type nibble is 1 (digital), reads a `0x2C`-byte record at `0x300 + 0x2C·(n−1)`, `n = +0x0E`; byte 0 → `3F358+1` and `3F720+1` (key id), byte 11 → `33840` (key length, inferred), 32 bytes from offset 12 → `3F358+2` and `3F720+3`; then `0301F074(len, 33841, 10)` | **per-channel privacy key list** (key id + up to 32-byte key; fits AES-256) | structure code-verified; "key" inferred from `3F720` (privacy state, §15) |
 | 17 | `0302E1A4` and scanner code | scan lists | code-verified |
@@ -542,26 +543,47 @@ passed to `03030560`, with the side-key handlers identified through the handler 
 `0305E134` also turns Monitor off (`0305CCF0(0)`, §RE_NOTES 2026-10-13) and stops the scanner before the alarm.
 TX/PTT behaviour is only documented here, not changed.
 
-### 16.3 Call Log writer (searched, not found — inferred absence)
+### 16.3 Call Log writer — found 2026-10-17 (code-verified; kind names inferred)
 
-The Call Log menu is the main-menu entry `Call Log` (`030B8D8C` list) with sub-items `Missed`, `Answered`, `Sent`,
-`Delete` (lists `030B9030`/`030B9250`, descriptor `030B9050` used by `03036A20`, `0303864C`, `0303DBD4`, `0303ED96`,
-`0303EF3E`), and a `Missed Call` popup (`030BA748`, used by `03035D2C`). None of the area readers in §16.1 has a
-call-log record format, and the call-start/-end UI handlers `0305E3F0`, `0305E5E4`, `0305E654` call no area writer.
-So the call log is either kept in RAM only or written through a register-based area id that the constant search
-cannot attribute. Next step: decompile the three viewer entries above and follow their record source.
+*Correction:* the first version of this section (same day) said the writer was not found; the area id is taken from
+a table, which the constant search of §16 cannot attribute. The original text is kept in git (`git show 11d2616:docs/RX_CALL_PATH_ANALYSIS.md`).
+
+The UI task loop `0302DF18` (code pointer at `0302B96C`) waits for event `0x1000` on `3FDB0`, runs `0302C54C` and
+`0302DBEC`, and then logs calls with **`03058B34(kind)`**, passing a copy of the call display state `3E0DC` (`+0x10`
+source, `+0x18` destination; `0x5C` bytes copied to the stack):
+
+| Condition at `0302DF64…0302DFDA` | Kind | After logging |
+|---|---|---|
+| `3E0E8` (`3E0DC+0xC`) bit 1 | 1 (record uses `3E0DC+0x10`, the caller) | bit 1 cleared |
+| `3E0E8` bit 2, hang state `0301E8A0() ≠ 2` (not the own-TX hang), bit 4 set | 2 | bit 2 cleared (`0302DFDE`) |
+| `3E0E8` bit 2, hang state ≠ 2, bit 4 clear | 3 | bit 2 cleared |
+
+`03058B34(kind)`: data-flash area id from the byte table `030B24F0` (kind 1 → area `0x0C`, 2 → `0x0D`, 3 → `0x0E`),
+per-kind RAM state from the word table at `030B24F4` (`18000B90`, `18000B98`, `18000BA0`; record count at `+4`); under
+the lock `334E0` it reads the area header (`0x17` bytes to `3ED2C`), allocates a 14-byte slot (slot index
+`((v >> 7) − 1)·9 + (v & 0x7F) / 14`, at most 20 = `0x14` records, the oldest is reused when full) and writes a record
+with the 24-bit ID, the RTC time (`0301C238`) and a value divided by 10 (call duration, inferred) through the
+copy-on-write writers `0300FB58`/`0300FDA4`. For kind 1 it also increments `33508+0x12` (unless `0xFF`) — a new-entry
+counter shown by the UI (inferred: missed-call badge).
+
+Mapping to the menu items `Missed` / `Answered` / `Sent` (lists `030B9030`/`030B9250`): bit 4 of `3E0E8` is set by the
+own-call start `0305C1E0` and by `0302DBEC`, and bit 0 by the RX call-start display `0305E3F0`. The most likely reading
+is kind 1 = Missed (counter + caller), kind 2 = Sent, kind 3 = Answered, but this is **inferred**; the flag writers in
+`0302DBEC`/`0302C4FC` were not fully traced. The `Missed Call` popup (`030BA748`, `03035D2C`) is consistent with kind 1.
+
+Data-flash areas `0x0C`–`0x0E` are added to the map in §16.1.
 
 ### 16.4 Open questions (owner) and RX-only checks
 
 1. CPS (read only): which CPS list fills data-flash area 16 (key id + 32-byte key)? Compare a codeplug with one
    AES-256 key entered against one without (PC-only file comparison).
-2. Does the Call Log survive a power cycle? (RAM-only vs flash, §16.3.) RX-only: receive a private call, power
-   off/on, open Call Log → Answered.
+2. ~~Does the Call Log survive a power cycle?~~ Code: yes, it is stored in data flash (§16.3). RX-only check of the kind
+   mapping: miss a private call (do not answer), then open Call Log → Missed; expected: one new entry with the caller ID.
 3. Alarm power: not to be tested by transmitting; read the channel's power setting in CPS only.
 
 ### 16.5 Not reviewed
 
-Areas 2, 3, 6, 10, `0x5C`, `0x65`–`0x67` roles; the Call Log record source; `03030560` reasons 5, 9, 10, 18–27;
+Areas 2, 3, 6, 10, `0x5C`, `0x67` roles; the Call Log kind mapping (§16.3); `03030560` reasons 5, 9, 10, 18–27;
 `0301F074`.
 
 ## 17. Roaming search (2026-10-17, code-verified flow; names inferred)
