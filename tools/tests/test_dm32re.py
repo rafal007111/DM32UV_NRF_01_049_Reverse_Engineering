@@ -130,6 +130,47 @@ class Analysis(unittest.TestCase):
         self.assertIn(0x0302E99C, hits)
 
 
+class TagRules(unittest.TestCase):
+    """No firmware needed: subsystem-tag decision rules (SUBSYSTEM_TAGS.md 2)."""
+
+    def test_family_and_canon(self):
+        from dm32re import tag
+        self.assertEqual(tag.family(["Main loop", "Menu/input"]), "UI tasks")
+        self.assertIsNone(tag.family(["Main loop", "Digital RX/DMR"]))
+        self.assertIsNone(tag.canon("NRF application; subsystem not classified"))
+        self.assertIsNone(tag.canon("RTOS (uC/OS-III, pre-V3.08 with ISR post queue)"))
+        self.assertEqual(tag.canon("Digital RX/DMR CSBK"), "Digital RX/DMR")
+
+    def test_decide(self):
+        from dm32re.tag import Tagger
+        t = Tagger._decide(1, {"Scanning": 4.5, "Settings": 1.5}, {"Scanning": ["x"]}, ["main loop step"], ["Main loop"])
+        self.assertEqual((t.tag, t.confident), ("Scanning", True))
+        t = Tagger._decide(1, {"Scanning": 3.0, "Settings": 2.5}, {}, [], [])
+        self.assertFalse(t.confident)  # margin below 1.0
+        t = Tagger._decide(1, {"Audio": 2.0}, {}, ["a", "b"], ["Main loop", "Menu/input"])
+        self.assertEqual((t.tag, t.confident), ("shared (UI tasks)", True))
+        t = Tagger._decide(1, {}, {}, ["a", "b"], ["Main loop", "Digital RX/DMR"])
+        self.assertEqual((t.tag, t.confident), ("shared", False))
+
+
+@unittest.skipUnless(HAVE_IMAGE and HAVE_BINUTILS, "needs stock image and csky binutils")
+class TagStock(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        from dm32re import cli, tag
+        cls.tags = tag.Tagger(cli.Ctx("stock", False)).run()
+
+    def test_spot_checked(self):  # SUBSYSTEM_TAGS.md 4, checked by hand
+        for va, want in [(0x0302225C, "Audio/tones"), (0x0300C2CC, "Baseband registers"),
+                         (0x0302F370, "Scanning"), (0x0301C98C, "CPS/USB"), (0x0305E6DC, "UI/status"),
+                         (0x030683AC, "shared (UI tasks)")]:
+            t = self.tags[va]
+            self.assertEqual((t.tag, t.confident), (want, True), f"{va:08X}")
+
+    def test_misleading_signals_lowered(self):
+        self.assertFalse(self.tags[0x030569E4].confident)  # reached only from the keys task, a menu helper
+
+
 @unittest.skipUnless(HAVE_IMAGE and HAVE_BINUTILS and (LIBREF / "Os" / "os_sem.o").exists(),
                      "reference corpus not built (tools/libref/build_ucos3.sh)")
 class LibraryId(unittest.TestCase):
