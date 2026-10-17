@@ -114,6 +114,15 @@ class Analysis(unittest.TestCase):
         self.assertTrue({0x00011190, 0x0306BB80, 0x0306BA38, 0x00011250} <= tmr_start)
         self.assertIn(0x0306B7F0, {t for s, t, k in self.x.callees_of[0x0306BE28]})  # OSTmrDel -> OS_TmrClr
 
+    def test_osinit_call_order(self):  # LIBRARY_SIGNATURES.md 6, code-verified
+        order = [t for s, t, k in sorted(self.x.callees_of[0x00010D5C])]
+        self.assertEqual(order, [0x000106DC, 0x000119E0, 0x00010D44, 0x03069550, 0x03069CF8, 0x03069D10,
+                                 0x0306A8AC, 0x0306AF0C, 0x00011FD8, 0x00012B70, 0x000118CC, 0x00010A54,
+                                 0x00013874, 0x0306B610, 0x0306B970, 0x03068E6C, 0x03068E68])
+        tags = {v for s, p, v in self.x.literals_in(0x41000000, 0x56000000) if 0x000116A4 <= s < 0x000117E2}
+        self.assertEqual(tags, {0x47534D54, 0x47414C46, 0x47495354, 0x414D4553, 0x53455254, 0x4B434954,
+                                0x53555354, 0x55455551})  # OS_IntQRePost object types
+
     def test_similarity(self):
         from dm32re import similar
         ix = similar.Index(self.x)

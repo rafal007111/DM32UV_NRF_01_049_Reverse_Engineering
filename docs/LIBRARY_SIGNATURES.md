@@ -142,6 +142,118 @@ measurement (`OS_SchedLockTimeMeasStart/Stop` `0001117C`/`000111EC`).
 `OS_TickTaskInit`), `Mem_SegAlloc` (`0305FDD4`, 11 instructions), the `OSTmrRemainGet`/`OSTaskQPend`/
 `OSMutexPend`/`OSIntExit` implementations (not located).
 
+## 6. Kernel pass 2: OSInit order, port, task list, 109 catalog rows (2026-10-17)
+
+Static only; stock image `de7dbcbc…`, `tools/dm32 fn/callers/callees` (binutils 2.42), T-HEAD-built uC/OS-III
+references as structure guide only. Every row carries its evidence in `function_catalog.csv` (subsystems
+`RTOS (uC/OS-III, pre-V3.08 with ISR post queue)`, `RTOS (uC/CPU)`, `RTOS (uC/OS-III C-SKY port)`,
+`RTOS (BSP tick/interrupt controller)`). Result: **109 rows** reviewed (42 high, 63 medium, 4 low; two of them
+upgraded from low, see below). All kernel and uC/CPU rows in IRAM `00010000–00014128` and flash
+`03068E00–0306BF08` are now named; six IRAM rows after `00014128` are application code (left for work item B).
+
+**OSInit call order (code-verified, pinned in `Analysis.test_osinit_call_order`):** `OSInitHook` `000106DC`,
+`OS_PrioInit` `000119E0`, `OS_RdyListInit` `00010D44`, `OS_FlagInit` `03069550`, `OS_MemInit` `03069CF8`,
+`OS_MsgPoolInit` `03069D10`, **`OS_MutexInit` `0306A8AC`**, `OS_QInit` `0306AF0C`, `OS_SemInit` `00011FD8`,
+`OS_TaskInit` `00012B70`, `OS_IntQTaskInit` `000118CC`, `OS_IdleTaskInit`, `OS_TickTaskInit` `00013874`,
+`OS_StatTaskInit`, `OS_TmrInit`, `OS_Dbg_Init` `03068E6C` (empty), `OSCfg_Init` `03068E68` (empty). Between the
+calls OSInit clears the globals in source order, which names them: `OSRunning` `42734`, `OSTCBCurPtr` `42524`,
+`OSTCBHighRdyPtr` `42CD0`, `OSPrioCur` `42CE4`, `OSPrioHighRdy` `42CCC`, `OSPrioSaved` `42724`, scheduler-lock
+time `42700`/`42CD4`/`42704`, round robin `OSSchedRoundRobinEn` `42532` and default quanta `42604`
+(= tick rate / 10), the seven application hook pointers `42714` (TaskCreate), `42708` (TaskDel), `426EC`
+(TaskReturn), `426E8` (Idle), `42C00` (Stat), `42A40` (TaskSw), `426D8` (TimeTick), `OSTaskRegNextAvailID`
+`42710`.
+
+**Kernel configuration (code-verified from the `OSCfg_*` const table at `03076DBC…03076E5C` and the code):**
+
+| Item | Value |
+|---|---|
+| Tick rate | `OSCfg_TickRate_Hz` = 100 Hz (`03076E1C`); timer 0 (`0x14000000`) reload = CPU clock (`3A628`) / 100, tick ISR `0306D6EC` on vector 33 |
+| Priorities | 64 (`OSPrioTbl` 2 words, `OSRdyList` 64 × 12 bytes at `42740`) |
+| Kernel tasks | ISR Queue 0, Timer 58 (10 Hz), Tick 59, Stat 60 (10 Hz), Idle 63; stacks 128 words each, limit 12 |
+| ISR post queue | `OSCfg_IntQSize` 10 entries at `40E94` (pre-V3.08 deferred posts; `OS_Sched0` `00011148` switches to the ISR Queue Task from every `OS_CRITICAL_EXIT` with posts pending) |
+| ISR stack | `4189C`, 0x100 words; interrupt frames use stack `4B7E0` (port) |
+| Message pool | 100 `OS_MSG` at `4125C` (`OSMsgPool` `42A50`) |
+| Tick / timer wheels | 17 spokes each (`4209C`, `411D8…`) |
+| Timestamps | `CPU_TS_TmrRd` `0306D6A0` returns `OSTickCtr` (`426F4`); `CPU_TS_TmrFreqSet(100)` — time stamps count ticks |
+| Enabled options | app hooks, round robin, task profiling (per-task cycles, `OSTaskSwHook`), interrupt-disable and scheduler-lock time measurement, statistics task, timers, flags, memory partitions, mutexes, queues, semaphores, task queues/semaphores, debug lists and names, task registers |
+
+`OS_IntQRePost` `000116A4` dispatches on the object type tags `TMSG`/`FLAG`/`TSIG`/`SEMA`/`TRES`/`TICK`/`TSUS`/`QUEU`;
+the `TICK` case runs round robin on `OSRdyList[OSPrioSaved]`, posts the tick task (`OSTickTaskTCB` `4253C`) and every
+`OSTmrUpdateCnt` (`4252C`) ticks the timer task (`OSTmrTaskTCB` `42610`).
+
+**Port (C-SKY, code-verified structure, names inferred from uC/OS-III port conventions):** `OSStartHighRdy` `000105B8`,
+`OSCtxSw` `000105BE` (saves r0–r13, r15, EPSR; when an interrupt frame is pending at `18000BD4` it swaps that frame
+instead), `OSIntCtxSw` `000105E6`, the common interrupt entry `0001064A` (vector-table words `00010080…`: frame to
+`18000BD4`, ISR stack `4B7E0`, `OSIntEnter`, acknowledge `0x17000010`, handler table `45538[vector − 32]`, `OSIntExit`,
+`rte`), `OSTaskStkInit` `00010748` (PSR `0x80000140`, return address `OS_TaskReturn` `000133DC`), `OSInitHook`
+`000106DC`. BSP: interrupt controller `0x17000000` (`0306D794`, `0306D7B0`, register/enable `0306D704`/`0306D73C`),
+timer `0306D6C0`, tick start `0306D670` (called by the startup `0002E174`).
+
+**Task list (code-verified from the 38 `OSTaskCreate` call sites; priority, stack size in 32-bit words; lower number
+= higher priority):**
+
+| Prio | Task (name string) | Entry | Stack | Created by |
+|---:|---|---|---:|---|
+| 0 | uC/OS-III ISR Queue Task | `0001183C` | 128 | `OS_IntQTaskInit` |
+| 5 | task ShutDown | `0301B784` | 128 | `0301B89C` |
+| 6 | SlotTimer | `030293C8` | 256 | `0300C904` |
+| 7 | keys | `03012D2C` | 192 | `03012EA0` |
+| 8 | keyTime | `030151D0` | 256 | `03012EA0` |
+| 10 | task rf | `0300DC94` | 256 | `0300D4B0` |
+| 11 | task usb | `0302B340` | 200 | `03029F44` |
+| 12 | txslot | `0002D620` | 256 | `0300C904` |
+| 13 | decrypt | `0002D324` | 256 | `0300C904` |
+| 14 | encrypt | `0002D2F0` | 256 | `0300C904` |
+| 17 | sysint | `0002D770` | 450 | `0300C904` |
+| 18 | rxslot | `0302386C` | 256 | `0300C904` |
+| 19 | task sound | `03022FB0` | 256 | `03021BD4` |
+| 20 | task psint | `0305F234` | 384 | `0300CD6C` |
+| 22 | CclTraffic | `0301E924` | 256 | `0300C904` |
+| 23 | rxcsbk | `030209E4` | 256 | `0300C904` |
+| 24 | rxvoice | `030206D0` | 384 | `0300C904` |
+| 25 | txmsg | `0301FDD8` | 256 | `0300C904`; re-created by `0300C898` after `OSTaskDel` |
+| 26 | rxmsg | `0301FF9C` | 256 | `0300C904` |
+| 27 | record | `0302124C` | 256 | `0300C904` |
+| 28 | task CodeSw | `030323C8` | 384 | `03030314` |
+| 29 | task cds | `0300E49C` | 256 | `0301D550` |
+| 30 | task init (main task) | `03068E54` | 720 | startup `0002E174` |
+| 31 | task menu | `03040A38` | 640 | `03035E18` |
+| 32 | Led Manage | `030614D8` | 256 | `03061170` |
+| 33 | cpchanscan | `03023B3C` | 256 | `0300C904`, only when `33CC9` = 2 |
+| 34 | task TmrHnd | `03055918` | 256 | `030559A8` |
+| 35 | task SqlCheck | `03060F18` | 256 | `0300D4B0` |
+| 36 | task CallDisp | `0302DF18` | 300 | `0302B7DC` |
+| 37 | task InputAlter | `0305AA50` | 200 | `03059448` |
+| 38 | task ScanDisp | `0305490C` | 384 | `030545FC` |
+| 58 | uC/OS-III Timer Task | `0306BBD4` | 128 | `OS_TmrInit` |
+| 59 | uC/OS-III Tick Task | `00013C34` | 128 | `OS_TickTaskInit` |
+| 60 | uC/OS-III Stat Task | `0306B1F8` | 128 | `OS_StatTaskInit` |
+| 63 | uC/OS-III Idle Task | `00010868` | 128 | `OS_IdleTaskInit` |
+| run time | encoder / decoder | `0002E5BC` / `0002EC4C` | 1280 / 768 | `000162A8` (priority from `0001616C`, vocoder library) |
+
+Prior docs called `0302DF18` "the UI task"; its name string is `task CallDisp`. The entries without catalog rows
+(`0001183C`, `00013C34`, `0306B1F8`, `0306BBD4`, `00010868`, `000133DC`, `0306D6EC`) are discovered entries
+(`SUB_…`) in `tools/dm32`.
+
+**Upgraded rows:** `03069868` `OS_FlagTaskRdy` low → medium (body read: `FlagsRdy` +0x84, `OS_TaskRdy`,
+`OS_PendListRemove`; called at all four match positions of `OS_FlagPost`); `0306D6A0` `CPU_TS_TmrRd` low → medium
+(`CPU_TS_TmrFreqSet(100)` in `0306D694`).
+
+**Correction to section 5:** mutexes exist. `OS_MutexInit` is the seventh `OSInit` call and `OS_MutexClr`
+`0306A4A8` sets the name `?MUTEX`; the mutex API functions sit in catalog gaps (below), so `OSMutexPend` was not
+"not located" but uncatalogued. The `OSIntExit` implementation is `000108B0`.
+
+**Uncatalogued kernel functions (no Ghidra boundary; inferred from object tags and `OS_ERR_*` codes, leads only):**
+`OSTaskChangePrio` `0001216C`, `OSTaskQFlush` `0001230C`, **`OSTaskQPend` `000123C4`** (25301 message-size check,
+`OS_MsgQGet`), `OSTaskQPendAbort` `00012580`, `OSTaskRegGet`/`OSTaskRegGetID`/`OSTaskRegSet` `00012664`/`000126A0`/
+`000126E4`, `OSTaskSemPendAbort` `000128B8`, `OSTaskSemSet` `000129B0`, `OSSemPendAbort` `00011C0C`, `OSSemSet`
+`00011D0C`, `OSTimeDlyResume` `00013F38`, `OSTimeGet`/`OSTimeSet` `000140D8`/`000140FC`, `OSFlagPendAbort`
+`03068E70`, `OSFlagPendGetFlagsRdy` `03068F70`, `OSMemGet`/`OSMemPut`/`OSMemCreate` `03069B00`/`03069B54`/
+`03069BD0` (tag `MEM `), `OSMutexPend`/`OSMutexPendAbort`/`OSMutexPost`/`OSMutexCreate`/`OSMutexDel`
+`03069F04`/`0306A19C`/`0306A2AC`/`0306A4EC`/`0306A5E8` (tag `MUTX`), `OSQFlush` `0306A8CC`, `OSQPendAbort`
+`0306AB78`, `OSQDel` `0306ADC4`, `OSStatTaskCPUUsageInit` `0306B560`, `OSTmrRemainGet` `0306B6D0` (tag `TMR `,
+29501…29507), `CPU_NameGet`/`CPU_NameSet` `00010298`/`0001030C`, CPU count-zeros variants `00010434…000105A8`.
+
 ## Open questions for the owner
 
 - None blocking. If the vendor toolchain release becomes known (CDK project files, an SDK in the update package),
