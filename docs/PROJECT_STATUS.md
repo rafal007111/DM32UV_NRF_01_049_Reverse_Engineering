@@ -36,3 +36,8 @@ in memory (`156a4872…`). Byte-exact target builds no longer require the owner'
 `tools/dm32 libsig` names 27 C-runtime catalog rows from the pinned T-HEAD libraries (exact or near byte matches);
 1892 rows remain unreviewed. The vendor used a different toolchain release than V3.10.29 (code-verified
 fingerprint). See [LIBRARY_SIGNATURES.md](LIBRARY_SIGNATURES.md).
+
+### Kernel review (2026-10-17)
+
+The four shared uC/OS-III claims are resolved and 50 kernel/uC/CPU/uC/LIB catalog rows are named (10 high, 38 medium,
+2 low); 1843 rows remain unreviewed. See [LIBRARY_SIGNATURES.md](LIBRARY_SIGNATURES.md) §5.

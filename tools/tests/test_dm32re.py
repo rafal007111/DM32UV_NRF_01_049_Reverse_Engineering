@@ -107,6 +107,13 @@ class Analysis(unittest.TestCase):
                       if i.mnem == "jmp" and i.addr not in self.d.jump_tables]
         self.assertEqual(unresolved, [])
 
+    def test_ucos3_kernel_review(self):  # LIBRARY_SIGNATURES.md 5, code-verified
+        sched_callers = {f for s, f in self.callers(0x00010934)}
+        self.assertTrue({0x00011A58, 0x00012720, 0x0306A984, 0x03068FE0} <= sched_callers)  # OSSched after pends
+        tmr_start = {t for s, t, k in self.x.callees_of[0x0306BD74]}
+        self.assertTrue({0x00011190, 0x0306BB80, 0x0306BA38, 0x00011250} <= tmr_start)
+        self.assertIn(0x0306B7F0, {t for s, t, k in self.x.callees_of[0x0306BE28]})  # OSTmrDel -> OS_TmrClr
+
     def test_similarity(self):
         from dm32re import similar
         ix = similar.Index(self.x)

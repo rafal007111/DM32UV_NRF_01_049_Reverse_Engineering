@@ -107,9 +107,40 @@ T-HEAD-built corpus, compared with the GCC 13.3 corpus of `libid_ucos3_candidate
   `OSSemDel` `00011E84`, `OSTmrCreate` `0306B844`; uC/LIB `Str_Str_N` `0306D520` (strong), `Str_Len_N`
   `0306D120`, `Str_Cmp_N` `0306D248`, `Str_Char_Last_N` `0306D47C` — four `Str_*` functions next to each other
   make uC/LIB presence likely (inferred), unlike the accidental `ASCII_*` byte hits above.
-- Shared claims to review: `00011A58` (`OSSemPend` vs `OSMutexPend`; the 'SEMA' tag found earlier settles it as
-  `OSSemPend`), `00012720` (`OSTaskSemPend` vs `OSTaskQPend`), `0306BD74` (`OSTmrDel`/`OSTmrStart`/
-  `OSTmrRemainGet`), `00010934` (`OSSched` vs `OSIntExit`).
+- Shared claims `00011A58`, `00012720`, `0306BD74`, `00010934`: resolved in §5.
+
+## 5. Kernel review: shared claims resolved, 50 catalog rows named (2026-10-17)
+
+Same inputs; `tools/dm32 fn/callers` listings (binutils 2.42), constants and callee sequences compared with the
+T-HEAD-built references. Evidence per row is in `function_catalog.csv` (10 high, 38 medium, 2 low).
+
+**Shared claims (code-verified):**
+
+| Address | Claims | Result | Evidence |
+|---|---|---|---|
+| `00011A58` | `OSSemPend` / `OSMutexPend` | `OSSemPend` | `'SEMA'` tag `0x414D4553`, no `'MUTX'` tag, no priority-change call |
+| `00012720` | `OSTaskSemPend` / `OSTaskQPend` | `OSTaskSemPend` | error 28206 present, no `p_msg_size` check (25301), no `OS_MsgQGet` before the pend |
+| `0306BD74` | `OSTmrDel` / `OSTmrStart` / `OSTmrRemainGet` | `OSTmrStart` | state switch: RUNNING → `OS_TmrUnlink` + `OS_TmrLink(p, 0)`; STOPPED/COMPLETED → `OS_TmrLink`; UNUSED → 29501; else 29505. `OSTmrDel` is `0306BE28` (`OS_TmrUnlink` + `OS_TmrClr` `0306B7F0`) |
+| `00010934` | `OSSched` / `OSIntExit` | `OSSched` | called at the `OSSched` position by 19 task-level Pend/Post/Del/Create functions; never from an ISR epilogue |
+
+**Kernel version (code-verified structure, version inferred):** the firmware kernel predates V3.08: posts are
+deferred from ISRs (`OS*Post` → `OS_IntQPost` `00011604` when nested, else the task-level `OS_SemPost` `00011FE8` /
+`OS_QPost` `0306AF1C`, functions absent from V3.08), `OS_TmrLock` is `OSSchedLock`, and `OS_ERR_OS_NOT_RUNNING`
+(24201) is never used. Configuration seen in the code: uC/CPU interrupt-disable time measurement
+(`CPU_IntDisMeasStart/Stop` `0001023C`/`00010260` inside every critical section) and scheduler-lock time
+measurement (`OS_SchedLockTimeMeasStart/Stop` `0001117C`/`000111EC`).
+
+**RAM labels (code-verified from the bodies):** `OSIntNestingCtr` `426FC` (ISR test in `OSTmrStart`),
+`OSSchedLockNestingCtr` `42531`, ISR post queue entries `42A5E` / max `4270E` / in-pointer `4273C`,
+`OSCfg_IntQSize` at flash `03076DD0`, scheduler-lock time maxima `42CD4`/`42704`, interrupt-disable measurement
+`4563C`/`45648`/`45638`/`4565C`/`45660`.
+
+**Not named** (left unreviewed, leads only): `0001042C` (wrapper to `000103E0`, possibly `CPU_CntLeadZeros`),
+`OSInit` callees by call order only (`000106DC` `OSInitHook`, `000119E0` `OS_PrioInit`, `00010D44`
+`OS_RdyListInit`, `03069550` `OS_FlagInit`, `03069CF8` `OS_MemInit`, `03069D10` `OS_MsgPoolInit`, `0306AF0C`
+`OS_QInit`, `00011FD8` `OS_SemInit`, `00012B70` `OS_TaskInit`, `000118CC` `OS_IntQTaskInit`, `00013874`
+`OS_TickTaskInit`), `Mem_SegAlloc` (`0305FDD4`, 11 instructions), the `OSTmrRemainGet`/`OSTaskQPend`/
+`OSMutexPend`/`OSIntExit` implementations (not located).
 
 ## Open questions for the owner
 
@@ -122,5 +153,5 @@ None needed: names of library functions do not change radio behaviour.
 
 ## Left unreviewed
 
-The not-matched rows of §2, `03070EF0` (formatter), `03010978` (heap user), the uC/OS-III leads and shared claims
-of §4 (not written to the catalog) and all other catalog rows still marked `unreviewed`.
+The not-matched rows of §2, `03070EF0` (formatter), `03010978` (heap user), the "Not named" kernel leads of §5 and
+all other catalog rows still marked `unreviewed` (1843 on 2026-10-17).
