@@ -165,5 +165,5 @@ earlier today. Details: [RX_CALL_PATH_ANALYSIS.md](RX_CALL_PATH_ANALYSIS.md) §1
 
 2026-10-17 alarm / Man Down (static): the Other Func Man Down setting (block 4 `0xA4` bit 3, `3EA05` bit 7) is only
 read by its toggle (side-key `ManDown`), boot load and menus — no sensor logic found (inferred). The `Man down alarm!`
-screen is alarm stage 8, reached when the channel's emergency system has alarm type 5 during a user-started alarm.
+screen is alarm stage 8, reached when the channel's emergency system has alarm type 5 when an alarm (user-started or received) reaches stage 2/3.
 Details: [ALARM_ANALYSIS.md](ALARM_ANALYSIS.md).

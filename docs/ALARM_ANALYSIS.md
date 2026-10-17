@@ -28,8 +28,9 @@ alarm actions: stages 1, 2, 3). `0302D178` advances the stage when it differs fr
 - `+0x30` bit 3 counts `+0x31` up to 5 ticks, then stage 5 (`0x28`) or `0302D148`;
 - stage 4 (`0x20`) counts `+6` of `3FD80` (PTR `0302D484`) to 10, then `0305E030`.
 
-So "Man down" in this build is an **alarm type selected by the emergency system** (`+0x3F == 5`), shown during an
-alarm started by the user (side key `Alarm`) — not an automatic fall detection.
+So "Man down" in this build is an **alarm type selected by the emergency system** (`+0x3F == 5`), shown when an alarm
+reaches stage 2 or 3 — stages that both the alarm start `0305DD38` and the received-CSBK alarm actions `0305EB8C` write —
+not an automatic fall detection.
 
 ## 3. Lone Worker
 
