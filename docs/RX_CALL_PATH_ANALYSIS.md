@@ -516,6 +516,13 @@ the literal pools.
 | `0x65` | boot `03066424` (from `0305F674`), `03066B00(z)` (select zone), `030668C8` (`Roam Zone %d/%d` list) | **roaming zones**: header 4 bytes (byte 0 → `40144+7` (1–64), byte 2 × `0x3C00` → `40144+1..2` (interval, inferred), byte 3 = current zone 1–64); zone `z`: member count at `0x20 + 0x21·(z−1)` → `40144+5`, 16 member bytes at `0x21 + 0x21·(z−1)` → `40144+8`; zone 1 name at `0x10` (16 bytes). An invalid header is reformatted with one zone named `Roam Zone 1` (English, `3E9D4+0x30` bit 6 = 1) or its GBK equivalent (bit 6 = 0) | code-verified layout; field names inferred |
 | `0x66` | `03066424` (defaults), `03066B50(n)` (reads the channel record located by `03055D3C(n)`, then 16 bytes at `(n−1)·0x1A`) | **roaming channels**: `0x1A`-byte records; default record 1 = name `Roam Channel 1` / `" Ch "` text + frequencies `0x44000000` / `0x43900000` (BCD 440.00000 / 439.00000 MHz, inferred) at `0x10`; flag byte at `0xFF0` → `40144+6` | code-verified layout; names inferred |
 
+Register-based area ids (added 2026-10-17 after §16.3): the 28 `0300F594` calls whose area is not a constant were
+attributed to their functions. They belong to four record stores that compute the area from a locator or table:
+contacts (`030332AC(n)` → area and slot, `0x18`-byte records read by `030332E0`; `03033xxx`/`03034xxx` viewers), zones
+(`03055C90` locator, used by `0304A200` to load the zone A/B names and member counts ≤ 64), messages (`03053xxx`,
+areas 7–10) and the Call Log (`030589C8`, `03058B34`, `03058E38`, `0305904C`, `030590B8`, `030591EC`; areas
+`0x0C`–`0x0E`). No further area was found this way.
+
 Consequence for the channel record (`SETTINGS_CPS_ANALYSIS.md` §3.2, `CHANNEL_RECORD.md`): bytes `+0x0E` (key index)
 and `+0x0F` bit 6 (enable) select an area-16 key, in addition to the block-4 key slot path through `+0x0C`/`+0x10`.
 Whether these are the CPS "enhanced" and "basic" privacy lists is **open** (qdmr comparison not done in this pass).
