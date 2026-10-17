@@ -498,6 +498,7 @@ the literal pools.
 
 | Area (`r0`) | Reader / writer (examples) | Content | Confidence |
 |---|---|---|---|
+| 1 | `030634F0`, `03062E20`, `03063654` | received position log, 50 × `0x50` records (`GNSS_ANALYSIS.md` §3a) | code-verified |
 | 2 | `03055B90` reads offset `0x20A` (2 bytes): value 1–15 (else 13) → `03065E58`, value 1–63 (else 39) → `03023028`, `0301E514(1)` | two bounded settings applied at boot | unreviewed role |
 | 3 | `03064D28` (`0x730`+7, `0x73A`+6), `03067618` (`0x30`+5, `0x3F`+2) | settings of the `0306xxxx` subsystem | unreviewed (GNSS/APRS inferred from the code region only) |
 | 4 | many (`SETTINGS_CPS_ANALYSIS.md` §1–§2); `0xF00` stun marker (`DATA_PATH_ANALYSIS.md` §4.4); `0xF01`/`0xF02` read by the boot channel restore `03058528` into `3E9D4+0x60/0x61` | general settings | code-verified |

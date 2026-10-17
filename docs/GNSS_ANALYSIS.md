@@ -50,6 +50,23 @@ matches the menu string `GPS + BDS` (`030BD268`).
 The last row adds a second restart path to `SETTINGS_CPS_ANALYSIS.md` §3.1: an open CPS session that goes silent is
 ended by a reboot after about 800 slow ticks (tick period not established).
 
+## 3a. Received position log — data-flash area 1 (code-verified structure; field names inferred)
+
+| Function | Behaviour |
+|---|---|
+| `03062E20` | record count = 16-bit word at offset 0 of area 1 |
+| `03062E44(i)` / `03062E74(i, buf)` | read 3 bytes / a record at `0x10 + 0x50·i` |
+| `030634F0(buf, len)` (called by the position display `03063EA4`, `DATA_PATH_ANALYSIS.md` §4.3) | appends a `0x50`-byte record: payload `buf` (up to `0x46` bytes), 2 bytes from `4009C+0x24` and 8 bytes from `4009C+0x28`; when the count would exceed 50 it erases the area, and when it is exactly 50 it keeps the newest 30 and drops 20. Writes go to a spare sector (`0300F5B4`) that is then swapped in (`0300F2FC`, copy-on-write) |
+| `03063654` (from the data-area reset `030323F4` and the menu handler `0304D7E0`) | erases area 1 and writes count 0 |
+| `030633D8(first, sel, count)` | the `APRS Info %d/%d` list (8 rows per page) |
+
+So the radio stores up to 50 received position reports in data flash. The two extra fields are probably a receive
+time stamp (inferred). A position report is a received data message (`DATA_PATH_ANALYSIS.md` §4.3), not AX.25.
+
+Dead code (inferred: no `bsr` and no pointer word in the image): `03011C78` sends a string + CR/LF to the GNSS UART
+(`0301D92C`, the only use of the `\r\n` constant `030825E4` found) and `03011CC4` would send the raw RMC sentence as
+message type 4 through `0305CD88`. Neither has a Ghidra function or a caller.
+
 ## 4. Open questions (owner) and RX-only checks
 
 1. Does the radio set its clock from GNSS? Expected (code): with GNSS on and a fix, the clock jumps to UTC adjusted
