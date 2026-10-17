@@ -68,3 +68,14 @@ written, no radio accessed.
 TS/CC Match storage stays block 4 `0x60` bits 2/3 (CPS preservation still an owner check that writes the radio);
 static risk review of the TS/CC Match sites in `MATCH_OPTIONS_DESIGN.md` §3.10 (one new design rule, R1). The CPS
 command table was not completed. No image written, no radio accessed.
+
+### Targeted review T2b and S (2026-10-17)
+
+Completed the CPS USB protocol in `docs/CPS_PROTOCOL.md`: the two frame loops (`PROGRAM` `0302A448` with `S`/`G`
+program flash + `W`/`R`/`D` data flash and a 24-bit LE address; `SYSINFO` `03029FB0` with `S`/`G` + `C` and a packed
+address, no restart), the program-flash vs SPI-data-flash write semantics (no read-back; whole-sector rewrite incl.
+the `0xFFF` area marker; copy-on-write firmware saves), the data-flash area map, and the compatibility rules for mods
+(block 4 `0x60` bits 2/3 storage choice re-confirmed; `PCTESTM` TX test modes flagged). Resolved the `keys`-task
+stack question (`MATCH_OPTIONS_DESIGN.md` §3.10.9): the ~844/1180 B worst path is a loose static over-approximation,
+most likely benign in stock, not caused by the design; T9 must stay a frameless leaf; stock stack checking is
+advisory only on CK803S. 14 catalog rows updated. No image written, no radio accessed, no CPS word sent.
