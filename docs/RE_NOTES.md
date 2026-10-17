@@ -175,3 +175,5 @@ the side-key `Alarm`, i.e. it can start an emergency alarm transmission without 
 TX inferred from the alarm path). Details: [ALARM_ANALYSIS.md](ALARM_ANALYSIS.md) §3.
 
 2026-10-17 summary of every stock path that can transmit without PTT (CSBK/data replies, roaming wake-ups, Lone Worker alarm, alarm): [AUTONOMOUS_TX.md](AUTONOMOUS_TX.md).
+
+2026-10-17 VOX (static): `030624C0` compares ADC channel 1 (`0301CA8C`, MMIO `0x140D0000`) with a 9-level threshold table and synthesizes PTT press/release events (`03014DD8(4/8)`), release after VOX Delay (`3EA33`). Added to [AUTONOMOUS_TX.md](AUTONOMOUS_TX.md) §1.
