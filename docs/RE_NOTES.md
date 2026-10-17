@@ -162,3 +162,8 @@ wake-ups (`03029C3C`, a transmission) waiting 300 ms each for the downlink event
 into areas `0x0C`/`0x0D`/`0x0E` (area id from the table `030B24F0`, missed by the constant search), 20 × 14-byte records
 (ID, RTC time, duration) per kind; mapping of kinds to Missed/Answered/Sent inferred. Supersedes "searched, not found"
 earlier today. Details: [RX_CALL_PATH_ANALYSIS.md](RX_CALL_PATH_ANALYSIS.md) §16.3.
+
+2026-10-17 alarm / Man Down (static): the Other Func Man Down setting (block 4 `0xA4` bit 3, `3EA05` bit 7) is only
+read by its toggle (side-key `ManDown`), boot load and menus — no sensor logic found (inferred). The `Man down alarm!`
+screen is alarm stage 8, reached when the channel's emergency system has alarm type 5 during a user-started alarm.
+Details: [ALARM_ANALYSIS.md](ALARM_ANALYSIS.md).
