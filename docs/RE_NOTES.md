@@ -187,3 +187,12 @@ TX inferred from the alarm path). Details: [ALARM_ANALYSIS.md](ALARM_ANALYSIS.md
 2026-10-17 library signatures (static): `tools/dm32 libsig` matches the pinned T-HEAD archives byte for byte (relocations masked and read back): 27 catalog rows named (9 high, 13 medium, 5 low), e.g. `memcpy` `03070B88`, `strlen` `03070DA4` (boot copy `030010E4`), `free` `030705A8`, `malloc` `0307050C` (near), `sprintf` `030704C4`; RAM labels for the malloc free list `18000C30` and `__malloc_lock` `0004A7D0`. code-verified: the vendor toolchain is **not** V3.10.29 (809 16-bit three-operand `addu`/`subu` with `rz == rx` in the application, none from V3.10.29), so vendor code cannot be matched byte for byte; inferred: `malloc`/`free` run without locking (`os_critical_*` are stubs). uC/OS-III references built with T-HEAD give 22 strong `libid` leads (GCC 13: 13). Details: [LIBRARY_SIGNATURES.md](LIBRARY_SIGNATURES.md). No radio access.
 
 2026-10-17 kernel review (static): shared `libid` claims resolved — `00011A58` `OSSemPend` ('SEMA' tag), `00012720` `OSTaskSemPend`, `0306BD74` `OSTmrStart` (state switch with `OS_TmrUnlink`/`OS_TmrLink`; `OSTmrDel` is `0306BE28`), `00010934` `OSSched` (19 task-level callers). The kernel predates V3.08 (deferred ISR posts through `OS_IntQPost` `00011604`; critical sections measure interrupt-disable and scheduler-lock times). 50 catalog rows named (10 high, 38 medium, 2 low), RAM labels `OSIntNestingCtr` `426FC`, `OSSchedLockNestingCtr` `42531`. Details: [LIBRARY_SIGNATURES.md](LIBRARY_SIGNATURES.md) §5. No radio access.
+
+2026-10-17 library naming finished (static, stock `de7dbcbc…`, binutils 2.42, pinned T-HEAD toolchain): OSInit call
+order and the `OSCfg_*` table name the kernel (100 Hz tick, 64 priorities, 10-entry ISR post queue, mutexes and
+memory partitions present); the 38 `OSTaskCreate` sites give the full task list (37 tasks with priorities and
+stacks; `0302DF18` is `task CallDisp`); the C-SKY port (`OSCtxSw` `000105BE`, interrupt entry `0001064A`) and BSP
+(tick timer `0x14000000`, interrupt controller `0x17000000`) are named; uC/LIB is present but unused by vendor code;
+block `0306D800–0306F97C` is fdlibm libm plus libgcc fp-bit soft-float. `tools/dm32 libsig --norm` normalises the
+vendor encodings: malloc/memset/isspace/strtoul identical. 174 catalog rows named. Details:
+[LIBRARY_SIGNATURES.md](LIBRARY_SIGNATURES.md) §6–§9. No radio access, no image written.

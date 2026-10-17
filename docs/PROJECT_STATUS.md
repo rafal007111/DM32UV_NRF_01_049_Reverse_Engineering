@@ -41,3 +41,11 @@ fingerprint). See [LIBRARY_SIGNATURES.md](LIBRARY_SIGNATURES.md).
 
 The four shared uC/OS-III claims are resolved and 50 kernel/uC/CPU/uC/LIB catalog rows are named (10 high, 38 medium,
 2 low); 1843 rows remain unreviewed. See [LIBRARY_SIGNATURES.md](LIBRARY_SIGNATURES.md) §5.
+
+### Library naming finished (2026-10-17)
+
+Kernel pass 2, uC/LIB, the libm/soft-float block and `libsig --norm`: 177 catalog rows reviewed (kernel/port 109,
+uC/LIB 15, libm 10, C runtime 43; 174 were unreviewed, 3 raised from low) and 4 C-runtime rows raised to high;
+1669 rows remain unreviewed.
+Kernel configuration and the full task list are in [LIBRARY_SIGNATURES.md](LIBRARY_SIGNATURES.md) §6. No image
+written, no hardware test needed.

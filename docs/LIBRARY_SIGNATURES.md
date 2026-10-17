@@ -345,13 +345,19 @@ Left unreviewed in the C runtime: `0306FC60` (calls `__pack_d` three times), `03
 ## Open questions for the owner
 
 - None blocking. If the vendor toolchain release becomes known (CDK project files, an SDK in the update package),
-  its libraries would settle the near rows and enable matching decompilation of vendor code.
+  its libraries would settle the near and lead rows and enable matching decompilation of vendor code.
+- The vocoder tasks `encoder`/`decoder` get their priority at run time from `0001616C`; whether that library is
+  third-party (it has its own IRAM code around `00014200…00017000`) is open.
 
 ## RX-only hardware tests
 
-None needed: names of library functions do not change radio behaviour.
+None needed: names of library functions do not change radio behaviour. This work changed no firmware.
 
 ## Left unreviewed
 
-The not-matched rows of §2, `03070EF0` (formatter), `03010978` (heap user), the "Not named" kernel leads of §5 and
-all other catalog rows still marked `unreviewed` (1843 on 2026-10-17).
+- Library block (2026-10-17, after sections 6–9): `0306E0BC`, `0306E88C` (libm helpers), `0306FC60`, `0306FD70`,
+  `03070698`, `03071834`, `03071D90`, `03071DB0`, `03071EA4` (C runtime); the six comparison operators named only as
+  a group; the uncatalogued kernel/uC/LIB functions listed in sections 6–7; `03010978` (heap user).
+- IRAM `00014164…000141C8` (six rows after the kernel) are application code, handled by the subsystem tags.
+- All other catalog rows still marked `unreviewed` (1669 on 2026-10-17 after this pass; high 247, medium 224,
+  low 31).
