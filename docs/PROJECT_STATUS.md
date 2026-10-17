@@ -17,3 +17,10 @@ The actual 2171-function Ghidra database is now available as `analysis/archives/
 ### Branch consolidation (2026-10-15)
 
 All agent branches were consolidated into `master` (fast-forward to the most complete branch, which already contained every other branch; no commit was lost or rewritten). Since 2026-10-14 the static work added the HR_C7000 register cross-check (hardware CC filter `cc_opt` exists; no hardware slot filter is used), the received call path, settings/CPS map, channel record layout, `tools/dm32` helpers and a design-only TS/CC Match site inventory. Nothing new was built into an image, installed or hardware-tested; TS/CC Match remain unimplemented. Host tests: firmware 10 passed / 1 skipped, tools 15 run / 9 skipped (no objdump/Ghidra in the check environment).
+
+### Sixth pass (2026-10-17)
+
+Static documentation only: HR_C7000 register leads closed (`HR_C7000_CROSSCHECK.md` §8), data-flash area map and
+channel reload reasons (`RX_CALL_PATH_ANALYSIS.md` §16), the `0x50` overwrite risk removed (`SETTINGS_CPS_ANALYSIS.md`
+§10), design-document consolidation. The TS/CC Match candidate module, target build and patch plan are still open.
+Nothing built into an image, installed or hardware-tested.

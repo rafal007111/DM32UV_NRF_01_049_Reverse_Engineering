@@ -116,3 +116,23 @@ code-verified: `030562C4` loads the RX group list (channel `+0x0F`) to `33CF4..3
 ### Catalog hygiene (2026-10-14, fifth pass)
 
 34 reviewed rows of `analysis/decompiled_modules/function_catalog.csv` updated (role, confidence, evidence; UTF-8 BOM and CRLF kept, other rows byte-identical, `tools/tests` 15/15 pass). Task entries and ISRs that Ghidra has no function for are listed in [DECOMPILED_MODULES.md](DECOMPILED_MODULES.md) instead of new rows.
+
+### Sixth pass: register leads, data-flash areas, settings risks (2026-10-17)
+
+Static only (stock `de7dbcbc…`, installed `156a4872…`, GZF `354f9324…`, datasheet `d60f652e…` re-checked; binutils 2.42,
+Ghidra 12.1.4 + CSKY v0.2 + sinc fix 3, `tools/dm32`). No radio access, no image written.
+- datasheet + code: `SYS_SOFT_RSTN` bits are self-releasing reset pulses (p. 54), resolving the bits 1:0 question;
+  `030215C8` is the `PCTESTM`/test-scene baseband test configuration; `03023574` always selects AF receive mode
+  (RX RF type is the constant 4), with a fixed sync threshold and `rf_recv_delay = 14000`; `LAYER2_SLOTON = 0x11`
+  includes the repeater-chip receive-slot bit. Details: [HR_C7000_CROSSCHECK.md](HR_C7000_CROSSCHECK.md) §8.
+- code-verified: data-flash area map (11 = contacts, 16 = per-channel privacy key list selected by channel `+0x0E`/
+  `+0x0F` bit 6, 18 offset 0 = current channel, …); `3E335` is the channel reload reason passed to `03057790`, and the
+  side-key `Alarm` sets reason 4, which forces TX power bits to 2; the Call Log writer was searched and not found.
+  Details: [RX_CALL_PATH_ANALYSIS.md](RX_CALL_PATH_ANALYSIS.md) §16.
+- code-verified: the block-4 `0x50` writer `030610D8` is unreachable (its only caller tests `r3 == 8` on paths where
+  `r3` is 3 or ≥ 22), so it cannot overwrite `0x60`; `3EA06` bits 0/1/7 unused and bits 3:2 never written.
+  Details: [SETTINGS_CPS_ANALYSIS.md](SETTINGS_CPS_ANALYSIS.md) §10.
+- Docs: `CC_MATCH_DESIGN.md` is now a pointer page; its CSBK decode-flag finding moved to `DATA_PATH_ANALYSIS.md` §8a.
+  The TS/CC Match candidate module, build and in-memory patch plan (work items 2–4 of `NEXT_AGENT_PROMPT.md`) were
+  **not** produced in this pass; only the flag-storage header `firmware/source/match_flags.h` and the interface
+  header `match_options.h` exist.

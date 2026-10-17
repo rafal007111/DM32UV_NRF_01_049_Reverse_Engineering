@@ -296,5 +296,40 @@ export and with a constant back-tracker over the disassembly; RAM accesses with 
 
 ### 9.5 Not reviewed
 
-The `0x50` editor's length bound; Display Func storage for the four items missing from the manual; the `Call Log`
-writer; `3EA06` bit 7 and bits 0/1.
+~~The `0x50` editor's length bound~~ (writer unreachable, §10.1); Display Func storage for the four items missing from the manual; the `Call Log`
+writer (searched, `RX_CALL_PATH_ANALYSIS.md` §16.3); ~~`3EA06` bit 7 and bits 0/1~~ (§10.2).
+
+## 10. Sixth pass: the `0x50` writer and `3EA06` (2026-10-17)
+
+Inputs/tools as in `HR_C7000_CROSSCHECK.md` §0. Static only; no radio or CPS access.
+
+### 10.1 The block-4 `0x50` writer is unreachable in this build (code-verified control flow)
+
+§9.2 listed `030610D8` → `0300F878(4, 0x50, 3EEB8, len = 3EE49)` as a possible overwrite of `0x60` if the editor text
+could exceed 16 bytes. Its only caller is `0304E568` in the confirm handler `0304DDB0` (BSR scan; no word in the image
+points into `0304E53C..0304E568`). That block starts at `0304E53A` and writes only when `18000A98 == 10`,
+`18000B0A == 3` **and `r3 == 8`** (`cmpnei r3, 8` at `0304E54A`). `r3` holds the submenu index loaded at `0304DDBC`
+(`3E6A5[3E508[3]] + 2`) and is not changed before the test. The block is entered only:
+
+- by `bt 0x304E53A` at `0304DDC0` after `cmphsi r3, 22` (so `r3 ≥ 22`), or
+- through entry 3 of the jump table `030B2150` (`ldr.w r2, (r2, r3 << 2); jmp r2` at `0304DDC6`, so `r3 = 3`).
+
+`r3` is never 8 there, so the write never happens and the `r3 ≠ 8` branch (`0304E5F0`: `03035E68(35, 1)`) runs instead.
+**Conclusion: no stock path writes block 4 `0x50`, and PCall/GCall Match (`0x60` bits 0/1) and the proposed
+TS/CC Match bits cannot be overwritten through it.** This replaces the open risk in §9.2 and §9.5. (For reference:
+the editors that `03059C14(n)` sets up store the maximum length `n` in `18000ABC`; the two editors opened in
+`030450EC` use `n = 10` and `n = 16` — not needed any more for this question.)
+
+### 10.2 `3EA06` (`3E9D4+0x32`) bit use (code-verified accesses by `tools/dm32 acc 3EA06`)
+
+| Bits | Writers | Readers | Meaning |
+|---|---|---|---|
+| 0, 1, 7 | none | none | unused (inferred absence) |
+| 3:2 | **none** | getter `0304C434` id `0x30` (`0304C670`) | always 0 after the BSS clear (inferred); the id-`0x30` option therefore always reads 0 |
+| 4 | `0304A45C` (boot), `0304B158` (`0304BFE0`) | `030611B0` (LED GPIO `0x20`), `030611D8` (alert tone `0x21`), getter id 8 | LED / alert-tone suppression (roles from §9.2) |
+| 5, 6 | `0304B010` (boot), `0304B158` settings 9/10 | getter ids 9/10, `0304B138` → `0301ECF0` | PCall / GCall Match |
+
+### 10.3 Still open
+
+`0x67` reader `03057620` (role); Display Func storage of the four items not in the manual; the getter id `0x30`
+caller and what it would control.
