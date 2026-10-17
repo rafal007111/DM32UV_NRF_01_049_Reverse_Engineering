@@ -149,7 +149,80 @@ lock; not verified on air).
 
 ## 7. Not reviewed
 
-Exact meaning of `WORK_MODE` bit 2 in layer 2; reset semantics of `SYS_SOFT_RSTN` bits 1:0 as used by
-`030234E8`; `LAYER2_SLOTON` value `0x11` written at init; the test-mode setup `030215C8` (caller and purpose);
-the trunking `tdma_slot_num` field (no reader); the physical-layer FIR/threshold registers (`0x120`, `0x168`,
-`0x1B4`).
+*Updated 2026-10-17: the items struck through below are answered in §8.*
+
+~~Exact meaning of `WORK_MODE` bit 2 in layer 2~~ (partly, §8.4); ~~reset semantics of `SYS_SOFT_RSTN` bits 1:0 as used by
+`030234E8`~~ (§8.1); ~~`LAYER2_SLOTON` value `0x11` written at init~~ (§8.4); ~~the test-mode setup `030215C8` (caller and purpose)~~
+(§8.2); the trunking `tdma_slot_num` field (no reader); ~~the physical-layer FIR/threshold registers (`0x120`, `0x168`,
+`0x1B4`)~~ (§8.3; `0x168` is undocumented).
+
+Still open after §8: the layer-2 effect of `is_repeater` on a simplex channel; the meaning of the undocumented
+register `0x168`; why `rf_recv_delay` is 14000 (1.4 ms) where the AF-mode note asks for 2000; register `0x560`
+(`0300C304`, not in the register tables found); `tdma_slot_num`.
+
+## 8. Remaining register leads (2026-10-17)
+
+Inputs, tools and method as in §0 (all four input hashes re-checked on 2026-10-15). Static only; no radio access.
+
+### 8.1 `SYS_SOFT_RSTN` bits are self-releasing pulses (datasheet + code)
+
+Datasheet p. 54, §4.1.2.2: "the CPU generates a soft reset by configuring the soft-reset register; writing 0 makes the
+reset active, and the register value is **released to 1 automatically**". So a 0 bit is a one-shot reset pulse, not a
+level held by software. This resolves the §1 puzzle ("bits 1:0 stay 0 with no later write of 1"):
+
+| Writer | Value | Modules pulsed (bit = 0) | Context (code-verified) |
+|---|---|---|---|
+| `03023574` (DMR init) | `0x190` | ADC ctrl (6), baseband ADC (5), audio (3), FM (2), PHY (1), protocol (0); CPU, system and codec kept | first store after `03029438`/`03024E6C`, before the sync-pattern writes |
+| `030234E8` (DMR reset) | `0x1FC` | PHY (1), protocol (0) | drains TX queues and clears `3C620..3C627` |
+| `030215C8` (test-mode setup, §8.2), `03021710` | `0xFFFFFFFC` | PHY (1), protocol (0) | factory test entry |
+| `0305F2F4` | `0xFFFFFE7F` | CPU (8), system (7) | restart (§1) |
+
+`03021AF8` and IRAM `000169D8` clear bits 3/4 with read-modify-write (audio/codec pulse; context unreviewed).
+
+### 8.2 `030215C8(n)` — baseband factory test-mode setup (code-verified writes; test names inferred)
+
+Callers (BSR scan): the `PCTESTM` loop `0302AA58` (`0302AFB8`, `0302AFE8` with `n = 3E5F4`, `0302B036` with `n = 9`) and
+`03038034` (`03038460`, `03038492`, `030384E0`), a UI handler reached only through the code-pointer table at `030B161C`
+that repeats the same three call sequences (an on-radio test scene; inferred). It is not on the normal receive path.
+
+| `n` | Writes (stock bytes read in `flash.asm`) | Reading (datasheet fields) |
+|---|---|---|
+| all | `SYS_SOFT_RSTN = 0xFFFFFFFC` | PHY + protocol reset pulse (§8.1) |
+| 1, 3 | `LAYER2_CONTROL = 0x82`, `LAYER2_TXRX_CTRL = 0x81`, `WORK_MODE = 0x02`; 36 bytes `0x5F` written twice through `0300D3EC` (offsets 0 and 36) | physical-layer mode (layermode 0), aligned, continuous; TX enable + TX master; `txnextsloten` + PHY test; fixed TX payload pattern |
+| 2 | as 1 but payload `0x55`, then `0300C304(0)` | alternating-bit TX pattern |
+| 4 | `LAYER2_TXRX_CTRL = 0`, `LAYER2_CONTROL = 0`, `WORK_MODE = 0x13` | layermode 2 (layer 3), aligned, `work_slot_sel = 1` (the datasheet requires 1 in layer-3 non-repeater mode) |
+| 5…10 | `0x168 = 152`, `RF_RECV_DELAY = 0`, `WORK_MODE = 0x22`, `LAYER2_CONTROL = 0x40` (`rxen`), `LAYER2_TXRX_CTRL = 0xC1`, MS and BS sync detection enable (bit 31 of `0x144`, `0x13C`) | physical-layer receive test in time-slot mode |
+| 5…7 | then `WORK_MODE = 0x80`, `0300C304(1)` | FM (analog) mode |
+| 8…10 | `0300C304(0)`; for `n = 9` also `0301E580(0, 0, 1)` (analog RX setup) | |
+| > 10 | `WORK_MODE = 0x80` | FM mode |
+
+`0300C304(on)` writes `on` to `0x11000560`, which the register tables found in the datasheet do not list (other writers:
+IRAM `000169D8`/`00016AD0` save/restore). Unresolved.
+
+### 8.3 `THRESHOLD_VALUE` (`0x120`), `0x168`, `RF_RECV_DELAY` (`0x1B4`) (datasheet + code)
+
+| Register | Datasheet | Firmware |
+|---|---|---|
+| `0x120` `THRESHOLD_VALUE` (p. 282) | 28:24 `sync_real_limit` (default 9), 23:16 `maxvalue_low_limit` (0x64), 15:8 `maxvalue` (0x78), 7:0 `sig_cor_value` (0x67): sync-word detection thresholds | only writer `03023574`: `0x0978786F` → ratio 9 (default), low limit **0x78** (default 0x64), high limit 0x78 (default), arrival threshold **0x6F** (default 0x67). Low and high limit are equal, so the ratio test between them (used only when a value lies between the limits) never applies; the firmware uses one fixed sync threshold. With `adjustsyncmax = 1` (never cleared, §1) the chip may still adapt it |
+| `0x168` | **not listed**: the receive register table (p. 278) goes from `0x164` `RECV_INFO_COUNT` to `0x16C` `RECVFIR_COEF1` | `03023574`: 20 when the RX RF type is 4, else 152; `030215C8`: 152 in test modes 5…10. Meaning unknown |
+| `0x1B4` `RF_RECV_DELAY` (p. 290–291) | 18:0 receive-path delay compensation in 100 ns steps; "AF receive mode requires 2000, other schemes default 0". (The datasheet prints the next register, `MODEM_AK_CLK_CALB`, also at `0x1B4`; by the table on p. 278 it is `0x1B8` — datasheet typo) | `03023574`: **14000** (1.4 ms) when the RX RF type is 4, else 0; `030215C8`: 0 |
+
+RF type: `0300C2C4` returns the constant 4 (RX type) and `0300C2C8` the constant 3 (TX type), so in this build
+`03023574` always takes the type-4 branch: it sets `RF_MODE` bits 25 (`phase_avg_en`) and 24 (`af_mode`, AF receive
+enable) and `af_recv_ctrl` (bits 23:16) `= 0x26` (from `152 << 14`), and `rf_trans_mode` (bits 6:5) `= 3` (two-point modulation,
+the datasheet default). So the baseband runs in **AF receive mode** with an external FM receiver feeding it
+(consistent with the BK4819-style RF chip in `SETTINGS_CPS_ANALYSIS.md` §4; inferred). The `0x168 = 152` /
+`RF_RECV_DELAY = 0` branch at `03023720` is dead code in this build. Why the delay is 14000 rather than the
+datasheet's 2000 is not established (it may compensate the RF chip's audio path; inferred).
+
+### 8.4 `WORK_MODE.is_repeater` and `LAYER2_SLOTON = 0x11` (datasheet + code; effect partly inferred)
+
+- `WORK_MODE` (p. 279): bit 2 `is_repeater`: 0 = non-repeater mode, 1 = repeater mode. The datasheet gives no further
+  layer-2 description. `03023574` writes `0x6E` and `0301E580` sets bit 2 for every digital mode (§1). Bit 6 is
+  `is_tier1_mode` (0 = Tier I, 1 = Tier II) and bit 5 `is_continuemode` (1 = time-slot mode), matching the §1 reading.
+- `LAYER2_SLOTON` (p. 304): `03023574` writes `0x11` = bit 4 `bs_rx_slot_on` ("repeater-chip active receive mode:
+  establish receive slot") + bit 0 `dll_tx_slot_on` (establish the TX slot in normal layer-2 mode). `03023258` later
+  ORs in 5 (bits 0 and 2 `dll_rx_slot_on`).
+- Together these show that the firmware puts the chip into its **repeater-style receive configuration**, which
+  matches the §3.2 finding that every slot is received. Whether `is_repeater` changes anything else on a simplex
+  channel is not described in the datasheet (open).
