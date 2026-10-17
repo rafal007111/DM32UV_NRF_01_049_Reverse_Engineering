@@ -29,7 +29,7 @@ and tools as in `HR_C7000_CROSSCHECK.md` §0. Builds on `MONITOR_ANALYSIS.md` §
 | `0x0F` | `03021C44` when `3E9D4+0x43` bit 6 = Voice Func **StartUp Sound** (`3EA17` bit 6, `SETTINGS_CPS_ANALYSIS.md` §1.1) | power-on melody, LED toggled during it (`030611B0`/`030611CC`); **plays even with Radio Silent** (code-verified) |
 | `0x10`–`0x14` | | short single beeps (key tones, inferred); dropped during a call display |
 | `0x15`, `0x2E`, `0x2F` | `0300E530`, `0302D674`, `03055A70`; `030654F8` (`0x2E`/`0x2F`) | four-times repeated two-segment patterns (siren-like) |
-| `0x16` | `0301AC98`, `0302D598` | **looped sample sound** (`03022190`): IMA-style 4-bit samples from `030AFBA0` (`0x4F0` bytes, decoder `03029EA8`) written to `16000980` while `3FD4C+1` bit 3 is set (alarm state, inferred); **plays even with Radio Silent** |
+| `0x16` | `0301AC98` (analog call screen with decoded `PTT ID`, when `3FD4C+1` bit 3 is set), `0302D598` | **looped sample sound** (`03022190`): IMA-style 4-bit samples from `030AFBA0` (`0x4F0` bytes, decoder `03029EA8`) written to `16000980` while `3FD4C+1` bit 3 is set (alarm state, inferred); **plays even with Radio Silent** |
 | `0x18` / `0x19` | 20 / 18 sites (e.g. Monitor on/off `030174E0`) | "on" / "off" confirmation (code-verified sites, `MONITOR_ANALYSIS.md`) |
 | `0x1A` | 12 sites | two-segment chord |
 | `0x1B`, `0x30` | 45 sites; PTT handler `0305C334` (`0x30`) | long low tone — error/not allowed (inferred from 45 refusal-style sites) |

@@ -24,7 +24,10 @@ Safe test practice (owner): for RX-only tests use an Rx Only channel where possi
 Roaming, VOX and the GPS beacon interval in CPS, do not send texts/CSBKs to the radio's own ID from another radio unless a reply transmission is
 acceptable, and do not press `Alarm`.
 
-Not reviewed: the DTMF/TBST paths. Remote Monitor duration: §3.
+Not reviewed: the DTMF encoder (PTT-ID send) and TBST (1750 Hz burst, side-key function 30 `TBST Send`); both are
+started by PTT or a key, not automatically (inferred from their triggers; encoders not traced). `0301AC98` is the
+**receive** side: an analog call screen that shows a decoded `PTT ID` (name looked up with `03068780`) and plays tone
+`0x16` once when `3FD4C+1` bit 3 is set. Remote Monitor duration: §3.
 
 ## 1. VOX (2026-10-17, code-verified flow; signal names inferred)
 
