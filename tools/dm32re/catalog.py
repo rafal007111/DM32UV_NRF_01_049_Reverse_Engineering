@@ -80,3 +80,44 @@ def load() -> Catalog:
             rows.append(Function(int(r["address"], 16), r["current_name"], int(r["size_bytes"] or 0),
                                  r["decompiler_status"], r["documented_role"], r["confidence"]))
     return Catalog(rows)
+
+
+COLUMNS = ["address", "current_name", "size_bytes", "decompiler_status", "direct_call_sites", "known_direct_callers",
+           "string_xrefs", "subsystem", "documented_role", "confidence", "evidence"]
+EDITABLE = {"subsystem", "documented_role", "confidence", "evidence"}
+
+
+def update_rows(updates: dict[int, dict[str, str]], path=CATALOG) -> int:
+    """Rewrite only the catalog rows named in updates (address -> {column: value}); every other line stays
+    byte-identical. Keeps the UTF-8 BOM and CRLF line ends; only EDITABLE columns may change.
+    Returns the number of rows changed."""
+    import io
+    raw = path.read_bytes()
+    assert raw.startswith(b"\xef\xbb\xbf"), "catalog lost its UTF-8 BOM"
+    lines = raw[3:].decode("utf-8").split("\r\n")
+    assert lines[0].split(",") == COLUMNS, "unexpected catalog header"
+    changed, seen = 0, set()
+    for k in range(1, len(lines)):
+        if not lines[k]:
+            continue
+        row = next(csv.reader([lines[k]]))
+        va = int(row[0], 16)
+        if va not in updates:
+            continue
+        seen.add(va)
+        new = list(row)
+        for col, val in updates[va].items():
+            if col not in EDITABLE:
+                raise ValueError(f"{va:08X}: column {col} is not editable")
+            new[COLUMNS.index(col)] = val
+        if new != row:
+            buf = io.StringIO()
+            csv.writer(buf, lineterminator="").writerow(new)
+            lines[k] = buf.getvalue()
+            changed += 1
+    missing = set(updates) - seen
+    if missing:
+        raise KeyError("no catalog row for " + ", ".join(f"{m:08X}" for m in sorted(missing)))
+    path.write_bytes(b"\xef\xbb\xbf" + "\r\n".join(lines).encode("utf-8"))
+    load.cache_clear()
+    return changed

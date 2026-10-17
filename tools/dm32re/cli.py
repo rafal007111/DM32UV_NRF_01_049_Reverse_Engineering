@@ -226,6 +226,13 @@ def main(argv=None):
     s.add_argument("--csv", help="write all rows to this CSV")
     s.add_argument("--all", action="store_true", help="also print short and lead rows")
     s.add_argument("--no-near", action="store_true", help="skip the near (similarity) pass")
+    s.add_argument("--norm", action="store_true",
+                   help="also compare the library block after normalising vendor encodings (slower)")
+    s = sub.add_parser("tag", help="subsystem tags for unreviewed functions (see tag.py, docs/SUBSYSTEM_TAGS.md)")
+    s.add_argument("addr", type=addr, nargs="?", help="show the evidence for one function")
+    s.add_argument("--csv", help="write all tags to this CSV")
+    s.add_argument("--write-catalog", action="store_true",
+                   help="write 'auto: <tag>' into the subsystem column of confident unreviewed rows")
     a = p.parse_args(argv)
     if a.cmd == "libsig":
         from . import libsig
@@ -239,6 +246,9 @@ def main(argv=None):
     if a.cmd == "libid":
         from . import libid
         return libid.run(c, a)
+    if a.cmd == "tag":
+        from . import tag
+        return tag.run(c, a)
     globals()[f"cmd_{a.cmd}"](c, a)
     return 0
 

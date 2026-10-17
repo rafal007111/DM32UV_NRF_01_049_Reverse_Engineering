@@ -138,6 +138,7 @@ class RefFn:
     relocs: list[Reloc]  # offsets relative to the function start
     strings: dict[int, bytes] = field(default_factory=dict)  # reloc offset -> referenced NUL-terminated string
     labels: dict[int, str] = field(default_factory=dict)  # reloc offset -> local data label ("malloc.o:F")
+    start: int = 0  # offset in its section (pool alignment depends on it)
 
     @property
     def key(self) -> str:
@@ -189,7 +190,7 @@ def _functions(obj: bytes, origin: str) -> list[RefFn]:
                                     and s.type == 1), f"{tgt.name}+{r.addend:#x}")  # STT_OBJECT
                         labels[o] = f"{origin.rsplit(':', 1)[-1]}:{obj}"
             names = sorted({s.name for s in starts[lo]}, key=lambda n: (n.startswith("_"), n))
-            out.append(RefFn(names, origin, code, mask, rel, strings, labels))
+            out.append(RefFn(names, origin, code, mask, rel, strings, labels, lo))
     return out
 
 
@@ -464,10 +465,195 @@ def near(img: Image, refs: list[RefFn], rows: list[Match], cat, margin: int = 0x
     return out
 
 
+# ---- normalised comparison (2026-10-17) ---------------------------------------------------------------
+# The vendor toolchain release encodes some instructions differently from V3.10.29 (LIBRARY_SIGNATURES.md 3).
+# norm_tokens() turns a code blob into instruction tokens that are equal for both encodings:
+# - 16-bit three-operand addu/subu (0x58xx..0x5Fxx, r0-r7) with rz == rx (or rz == ry for addu) becomes the
+#   two-operand form 0x6000 | rz << 6 | rx << 2 (addu) / | 2 (subu), the only form V3.10.29 emits;
+# - a run of self-extensions zextb/zexth/sextb/sexth rx, rx (16-bit 0x74xx) at the function start is dropped;
+# - PC-relative fields are masked (br/bt/bf 16 and 32 bit, bez..bhsz, bsr32, lrw16/32, jsri/jmpi), so a
+#   removed instruction or a moved literal pool does not change the other tokens;
+# - literal-pool words (found from the lrw/jsri/jmpi pool addresses) become data tokens, and a nop/zero
+#   halfword that only aligns a pool is dropped.
+# Register allocation is not normalised: a function that differs in register choice stays a near row.
+NORM_NEAR = 0.90  # difflib ratio on normalised tokens for a "norm-near" row
+NORM_RANGE = (0x0306D7E0, 0x03072800)  # application library block (libm, soft-float, libc) compared by --norm
+
+
+def _is32(h: int) -> bool:
+    return h & 0xC000 == 0xC000
+
+
+def norm_insn(h: int, lo: int | None = None) -> tuple:
+    """Normalised token of one instruction: (size, value with PC-relative bits cleared)."""
+    if lo is not None:  # 32-bit: first halfword is the high part
+        w = h << 16 | lo
+        if w >> 26 == 0x38:  # bsr32
+            return (4, w & ~0x3FFFFFF)
+        if h & 0xFF9F in (0xE800, 0xE840, 0xE860) or 0xE900 <= h <= 0xE9BF:  # br/bf/bt, bez..bhsz
+            return (4, w & ~0xFFFF)
+        if h & 0xFFE0 in (0xEA80, 0xEAC0, 0xEAE0):  # lrw32 rz, jmpi32, jsri32
+            return (4, w & ~0xFFFF)
+        return (4, w)
+    top = h & 0xFC00
+    if top in (0x0400, 0x0800, 0x0C00):  # br16 / bt16 / bf16
+        return (2, h & ~0x03FF)
+    if top == 0x1000 or (top == 0x0000 and h != 0):  # lrw16 / extended lrw16: keep rz (bits 7:5)
+        return (2, h & ~0x031F)
+    if h & 0xF800 == 0x5800 and h & 3 in (0, 1):  # addu16/subu16 rz, rx, ry (three-operand)
+        rx, rz, ry, sub = h >> 8 & 7, h >> 5 & 7, h >> 2 & 7, h & 1
+        if rz == rx:
+            return (2, 0x6000 | rz << 6 | ry << 2 | sub << 1)
+        if rz == ry and not sub:
+            return (2, 0x6000 | rz << 6 | rx << 2)
+    return (2, h)
+
+
+def _pool_target(addr: int, h: int, lo: int | None) -> int | None:
+    if lo is None:
+        top = h & 0xFC00
+        if top == 0x1000 or (top == 0x0000 and h != 0):
+            imm = (h & 0x1F) | ((h >> 8) & 3) << 5
+            off = imm << 2 if top == 0x1000 else (0x80 + ((~imm) & 0x7F)) << 2
+            return (addr + off) & ~3
+        return None
+    if h & 0xFFE0 in (0xEA80, 0xEAC0, 0xEAE0):
+        return (addr + (lo << 2)) & ~3
+    return None
+
+
+def norm_tokens(code: bytes, mask: bytes | bytearray | None = None, limit: int | None = None,
+                with_end: bool = False, base: int = 0):
+    """Normalised tokens of a function starting at code[0] (see the comment above).
+
+    mask (reference side): 0 bytes are relocations; a pool word under a relocation becomes ("D", None).
+    limit: stop after this many tokens (firmware side, where the function length is not known exactly);
+    with_end: also return the number of bytes consumed;
+    base: address (or section offset) of code[0]; literal pools are 4-aligned absolutely."""
+    out: list[tuple] = []
+    pools: set[int] = set()
+    i, start = 0, True
+    n = len(code)
+    while i + 2 <= n and (limit is None or len(out) < limit):
+        if i in pools and i + 4 <= n:
+            word = struct.unpack_from("<I", code, i)[0]
+            reloc = mask is not None and not all(mask[i:i + 4])
+            out.append(("D", None if reloc else word))
+            i += 4
+            continue
+        h = struct.unpack_from("<H", code, i)[0]
+        if (i + 2) in pools and h in (0x6C03, 0x0000):  # alignment filler before a pool
+            i += 2
+            continue
+        if _is32(h) and i + 4 <= n:
+            lo = struct.unpack_from("<H", code, i + 2)[0]
+            t = norm_insn(h, lo)
+            p = _pool_target(base + i, h, lo)
+            size = 4
+        else:
+            lo = None
+            t = norm_insn(h)
+            p = _pool_target(base + i, h, None)
+            size = 2
+        if p is not None and p - base > i:
+            pools.add(p - base)
+        if start and lo is None and h & 0xFC00 == 0x7400 and (h >> 6 & 15) == (h >> 2 & 15):
+            i += 2  # leading self-extension zextb/zexth/sextb/sexth rx, rx
+            continue
+        start = False
+        out.append(("I",) + t)
+        i += size
+    return (out, i) if with_end else out
+
+
+# Register fields per instruction format, cleared by blind() for a register-blind ratio (heuristic, lead
+# quality only): 16-bit formats by their top bits, 32-bit formats keep the major opcode and sub-opcode bits.
+_REG16 = [(0xF800, 0x5800, 0x07FC), (0xC000, 0x4000, 0x07E0 & 0xFFFF), (0xC000, 0x8000, 0x07E0),
+          (0xE000, 0x2000, 0x0700), (0xFC00, 0x1800, 0x0700), (0xF000, 0x6000, 0x03FC), (0xF000, 0x7000, 0x03FC)]
+
+
+def blind(t: tuple) -> tuple:
+    """Token with register fields cleared (see _REG16); data tokens lose their value."""
+    if t[0] == "D":
+        return ("D",)
+    _, size, v = t
+    if size == 4:
+        return ("I", 4, v & ~(0x3FF << 16) & ~0x1F if v >> 26 != 0x38 else v)
+    for m, val, regs in _REG16:
+        if v & m == val:
+            return ("I", 2, v & ~regs)
+    return t
+
+
+def norm_compare(ref: list[tuple], fw: list[tuple], regs_blind: bool = False) -> tuple[bool, float]:
+    """(identical after normalisation, difflib ratio). Relocated pool words (None) match any word.
+    regs_blind: the ratio ignores register fields (blind()); identity is always register-exact."""
+    import difflib
+    same = len(ref) == len(fw) and all(a == b or (a[0] == b[0] == "D" and None in (a[1], b[1]))
+                                       for a, b in zip(ref, fw))
+    key = blind if regs_blind else (lambda t: ("D",) if t[0] == "D" else t)  # ratio ignores pool values
+    ratio = difflib.SequenceMatcher(None, [key(t) for t in ref], [key(t) for t in fw], autojunk=False).ratio()
+    return same, ratio
+
+
+NORM_LEAD = 0.25  # register-blind ratio for a "norm-lead" row (rank-1 candidate only, never a name by itself)
+NORM_LEAD_MARGIN = 0.03  # ... and this far ahead of the best candidate with another name
+
+
+def norm_pass(img: Image, refs: list[RefFn], cat, lo: int, hi: int, skip: set) -> list[Match]:
+    """Compare every catalog function in [lo, hi) not in skip with every reference of similar size.
+
+    norm: identical after normalisation; norm-near: register-exact ratio >= NORM_NEAR; norm-lead: otherwise
+    the best register-blind candidate if its ratio is >= NORM_LEAD and clearly ahead of other names."""
+    sp = Space(img)
+    pool = []
+    for f in refs:
+        if len(f.code) >= 12 and f.fixed * 2 >= len(f.code):
+            pool.append((f, norm_tokens(f.code, f.mask, base=f.start)))
+    out = []
+    for fn in cat.funcs:
+        if not lo <= fn.addr < hi or fn.addr in skip or fn.size < 8:
+            continue
+        o = sp.off(fn.addr)
+        best = (False, 0.0, None)
+        blind_rank: list[tuple[float, str, RefFn]] = []
+        cache: dict[int, tuple[list[tuple], int]] = {}
+        for f, rt in pool:
+            if abs(fn.size - len(f.code)) > max(32, len(f.code) // 3):
+                continue
+            nlen = len(rt)
+            # firmware tokens: as many as the reference has, read from enough bytes to cover them
+            if nlen not in cache:
+                cache[nlen] = norm_tokens(img.data[o:o + 4 * nlen + 64], None, limit=nlen, with_end=True,
+                                          base=fn.addr)
+            fw, end = cache[nlen]
+            if len(fw) < nlen:
+                continue
+            same, r = norm_compare(rt, fw)
+            same = same and end >= fn.size - 2  # a prefix of a longer function is not a match
+            if (same, r) > best[:2]:
+                best = (same, r, f)
+            blind_rank.append((norm_compare(rt, fw, regs_blind=True)[1], f.key, f))
+        same, r, f = best
+        if f is not None and (same or r >= NORM_NEAR):
+            out.append(Match(fn.addr, sp.va(o)[1], set(f.names), {f.lib}, fn.size, 0,
+                             "norm" if same else "norm-near", 1, ratio=round(r, 3)))
+        elif blind_rank:
+            blind_rank.sort(key=lambda x: -x[0])
+            rb, key, fb = blind_rank[0]
+            other = next((x[0] for x in blind_rank if x[1] != key and not set(x[2].names) & set(fb.names)), 0.0)
+            if rb >= NORM_LEAD and rb - other >= NORM_LEAD_MARGIN:
+                out.append(Match(fn.addr, sp.va(o)[1], set(fb.names), {fb.lib}, fn.size, 0, "norm-lead", 1,
+                                 ratio=round(rb, 3)))
+    return out
+
+
 def strength(m: Match) -> str:
-    if m.method in ("call-target", "data-ref"):
+    if m.method in ("call-target", "data-ref", "norm-lead"):
         return "lead"
-    if m.method == "near":
+    if m.method == "norm":
+        return "norm"
+    if m.method in ("near", "norm-near"):
         return "near-conflict" if m.disagree else "near"
     if m.disagree or m.str_bad:
         return "conflict"
@@ -487,7 +673,7 @@ def write_csv(path: Path, rows: list[Match], cat) -> None:
         for m in rows:
             c = cat.by_addr.get(m.va) if cat else None
             w.writerow([f"{m.va:08X}", m.region, ";".join(sorted(m.names)), ";".join(sorted(m.libs)[:3]),
-                        m.size, m.fixed, m.method, strength(m), m.hits, m.ratio if m.method == "near" else "", m.agree, m.disagree, m.str_ok,
+                        m.size, m.fixed, m.method, strength(m), m.hits, m.ratio if m.method in ("near", "norm", "norm-near", "norm-lead") else "", m.agree, m.disagree, m.str_ok,
                         m.str_bad, c.name if c else "", c.confidence if c else ""])
 
 
@@ -518,16 +704,29 @@ def run(args) -> int:
                 else:
                     m.disagree += 1
         rows.sort(key=lambda m: m.va)
+    if getattr(args, "norm", False):
+        done = {m.va for m in rows if m.method.startswith("bytes")}
+        at = {m.va: i for i, m in enumerate(rows)}
+        for m in norm_pass(img, refs, cat, NORM_RANGE[0], NORM_RANGE[1], done):
+            i = at.get(m.va)
+            if i is None:
+                rows.append(m)
+            elif m.method == "norm-lead":
+                continue  # an existing row (exact, near or a relocation lead) is better evidence
+            elif rows[i].method in ("call-target", "data-ref", "near") and (m.method == "norm" or m.ratio > rows[i].ratio):
+                m.agree, m.callers, m.names = rows[i].agree, rows[i].callers, m.names | rows[i].names
+                rows[i] = m
+        rows.sort(key=lambda m: m.va)
     kinds = defaultdict(int)
     for m in rows:
         kinds[strength(m)] += 1
     print(f"reference functions: {len(refs)}; firmware rows: {len(rows)} " +
           " ".join(f"{k}={v}" for k, v in sorted(kinds.items())))
     for m in rows:
-        if args.all or strength(m) in ("exact", "exact-short", "near", "near-conflict", "conflict"):
+        if args.all or strength(m) in ("exact", "exact-short", "norm", "near", "near-conflict", "conflict"):
             c = cat.by_addr.get(m.va)
             print(f"{m.va:08X} {m.region:<5} {strength(m):<11} {m.method:<11} {m.fixed:>5} "
-                  f"{'r=%.2f' % m.ratio if m.method == 'near' else 'agree=%d' % m.agree} str={m.str_ok}/{m.str_ok + m.str_bad} {','.join(sorted(m.names))[:60]:<60} "
+                  f"{'r=%.2f' % m.ratio if m.method in ('near', 'norm', 'norm-near', 'norm-lead') else 'agree=%d' % m.agree} str={m.str_ok}/{m.str_ok + m.str_bad} {','.join(sorted(m.names))[:60]:<60} "
                   f"{c.name + ' ' + c.confidence if c else '(no catalog row)'}")
     if args.csv:
         write_csv(Path(args.csv), rows, cat)

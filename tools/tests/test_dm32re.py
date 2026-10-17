@@ -114,11 +114,61 @@ class Analysis(unittest.TestCase):
         self.assertTrue({0x00011190, 0x0306BB80, 0x0306BA38, 0x00011250} <= tmr_start)
         self.assertIn(0x0306B7F0, {t for s, t, k in self.x.callees_of[0x0306BE28]})  # OSTmrDel -> OS_TmrClr
 
+    def test_osinit_call_order(self):  # LIBRARY_SIGNATURES.md 6, code-verified
+        order = [t for s, t, k in sorted(self.x.callees_of[0x00010D5C])]
+        self.assertEqual(order, [0x000106DC, 0x000119E0, 0x00010D44, 0x03069550, 0x03069CF8, 0x03069D10,
+                                 0x0306A8AC, 0x0306AF0C, 0x00011FD8, 0x00012B70, 0x000118CC, 0x00010A54,
+                                 0x00013874, 0x0306B610, 0x0306B970, 0x03068E6C, 0x03068E68])
+        tags = {v for s, p, v in self.x.literals_in(0x41000000, 0x56000000) if 0x000116A4 <= s < 0x000117E2}
+        self.assertEqual(tags, {0x47534D54, 0x47414C46, 0x47495354, 0x414D4553, 0x53455254, 0x4B434954,
+                                0x53555354, 0x55455551})  # OS_IntQRePost object types
+
     def test_similarity(self):
         from dm32re import similar
         ix = similar.Index(self.x)
         hits = {o: r for o, _, r, _ in ix.query(0x0302E974, top=20, min_ratio=0.9)}
         self.assertIn(0x0302E99C, hits)
+
+
+class TagRules(unittest.TestCase):
+    """No firmware needed: subsystem-tag decision rules (SUBSYSTEM_TAGS.md 2)."""
+
+    def test_family_and_canon(self):
+        from dm32re import tag
+        self.assertEqual(tag.family(["Main loop", "Menu/input"]), "UI tasks")
+        self.assertIsNone(tag.family(["Main loop", "Digital RX/DMR"]))
+        self.assertIsNone(tag.canon("NRF application; subsystem not classified"))
+        self.assertIsNone(tag.canon("RTOS (uC/OS-III, pre-V3.08 with ISR post queue)"))
+        self.assertEqual(tag.canon("Digital RX/DMR CSBK"), "Digital RX/DMR")
+
+    def test_decide(self):
+        from dm32re.tag import Tagger
+        t = Tagger._decide(1, {"Scanning": 4.5, "Settings": 1.5}, {"Scanning": ["x"]}, ["main loop step"], ["Main loop"])
+        self.assertEqual((t.tag, t.confident), ("Scanning", True))
+        t = Tagger._decide(1, {"Scanning": 3.0, "Settings": 2.5}, {}, [], [])
+        self.assertFalse(t.confident)  # margin below 1.0
+        t = Tagger._decide(1, {"Audio": 2.0}, {}, ["a", "b"], ["Main loop", "Menu/input"])
+        self.assertEqual((t.tag, t.confident), ("shared (UI tasks)", True))
+        t = Tagger._decide(1, {}, {}, ["a", "b"], ["Main loop", "Digital RX/DMR"])
+        self.assertEqual((t.tag, t.confident), ("shared", False))
+
+
+@unittest.skipUnless(HAVE_IMAGE and HAVE_BINUTILS, "needs stock image and csky binutils")
+class TagStock(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        from dm32re import cli, tag
+        cls.tags = tag.Tagger(cli.Ctx("stock", False)).run()
+
+    def test_spot_checked(self):  # SUBSYSTEM_TAGS.md 4, checked by hand
+        for va, want in [(0x0302225C, "Audio/tones"), (0x0300C2CC, "Baseband registers"),
+                         (0x0302F370, "Scanning"), (0x0301C98C, "CPS/USB"), (0x0305E6DC, "UI/status"),
+                         (0x030683AC, "shared (UI tasks)")]:
+            t = self.tags[va]
+            self.assertEqual((t.tag, t.confident), (want, True), f"{va:08X}")
+
+    def test_misleading_signals_lowered(self):
+        self.assertFalse(self.tags[0x030569E4].confident)  # reached only from the keys task, a menu helper
 
 
 @unittest.skipUnless(HAVE_IMAGE and HAVE_BINUTILS and (LIBREF / "Os" / "os_sem.o").exists(),
@@ -150,6 +200,49 @@ class LibSigDecoding(unittest.TestCase):
         self.assertEqual(libsig.bsr32_target(bytes.fromhex("00e0d204"), 0, 0x030704EC), 0x03070E90)
         self.assertEqual(libsig.bsr32_target(bytes.fromhex("ffe3bafa"), 0, 0x030718C4), 0x03070E38)
         self.assertIsNone(libsig.bsr32_target(bytes.fromhex("14d06ccb"), 0, 0x100))
+
+
+class LibSigNormalise(unittest.TestCase):
+    """No firmware needed: vendor versus V3.10.29 encodings (LIBRARY_SIGNATURES.md 9)."""
+
+    def test_three_operand_addu_subu(self):
+        from dm32re.libsig import norm_insn
+        # stock 0001393A "addu r1, r1, r2" (5928) == as 2.42 "addu16 r1, r1, r2" -> 6048
+        self.assertEqual(norm_insn(0x5928), norm_insn(0x6048))
+        # stock 000101AC "subu r0, r0, r3" (580D) == two-operand subu r0, r3 (600E)
+        self.assertEqual(norm_insn(0x580D), norm_insn(0x600E))
+        # stock 00010AD8 "addu r2, r3, r2" (5B48): commutative, == addu r2, r3 (608C)
+        self.assertEqual(norm_insn(0x5B48), norm_insn(0x608C))
+        # distinct registers stay three-operand; subu is not commutative
+        self.assertEqual(norm_insn(0x5A2D), (2, 0x5A2D))  # subu r1, r2, r3
+        self.assertEqual(norm_insn(0x5B01), (2, 0x5B01))  # subu r0, r3, r0
+
+    def test_pc_relative_fields_masked(self):
+        from dm32re.libsig import norm_insn
+        self.assertEqual(norm_insn(0x041F), norm_insn(0x0401))  # br16
+        self.assertEqual(norm_insn(0xE800, 0x001C), norm_insn(0xE800, 0x0100))  # br32
+        self.assertEqual(norm_insn(0xE903, 0x0016), norm_insn(0xE903, 0x0002))  # bez r3
+        self.assertNotEqual(norm_insn(0xE903, 0x0016), norm_insn(0xE904, 0x0016))  # bez r4
+        self.assertEqual(norm_insn(0xE000, 0x000A), norm_insn(0xE3FF, 0xFABA))  # bsr32
+        self.assertEqual(norm_insn(0x1065), norm_insn(0x1061))  # lrw16 r3, offset differs
+        self.assertNotEqual(norm_insn(0x1065), norm_insn(0x1045))  # lrw16 r2
+
+    def test_leading_self_extension_dropped(self):
+        from dm32re.libsig import norm_tokens
+        rts, zextb_r1 = b"\x3c\x78", b"\x44\x74"  # 783C rts, 7444 zextb r1, r1
+        self.assertEqual(norm_tokens(zextb_r1 + rts), norm_tokens(rts))
+        self.assertNotEqual(norm_tokens(rts + zextb_r1), norm_tokens(rts))  # only at the start
+
+    def test_pool_alignment(self):
+        from dm32re.libsig import norm_compare, norm_tokens
+        word = b"\x78\x56\x34\x12"
+        a = norm_tokens(b"\x61\x10" + b"\x3c\x78" + word, base=0)  # lrw16 r3 -> pool at 4; rts
+        b = norm_tokens(b"\x62\x10" + b"\x3c\x78" + b"\x03\x6c" + word, base=2)  # pool at 8, filler at 6
+        self.assertEqual(a, b)
+        self.assertEqual(a[-1], ("D", 0x12345678))
+        ref = norm_tokens(b"\x61\x10" + b"\x3c\x78" + word, mask=b"\x01" * 4 + b"\x00" * 4)
+        self.assertEqual(ref[-1], ("D", None))  # relocated pool word matches any value
+        self.assertTrue(norm_compare(ref, a)[0])
 
 
 @unittest.skipUnless(HAVE_THEAD, "pinned T-HEAD toolchain missing (tools/setup_cloud.sh --with-thead)")
@@ -188,6 +281,16 @@ class LibSigStock(unittest.TestCase):
         self.assertIn("malloc.o:F", self.rows[0x18000C30].names)
         self.assertIn("__malloc_lock", self.rows[0x0004A7D0].names)
         self.assertGreaterEqual(self.rows[0x03070E44].agree, 1)  # os_critical_enter called from free
+
+    def test_norm(self):  # LIBRARY_SIGNATURES.md 9: identical after normalisation
+        from dm32re import catalog, libsig
+        rows = {m.va: m for m in libsig.norm_pass(image.Image("stock"), libsig.load_reference(THEAD),
+                                                    catalog.load(), 0x03070500, 0x03071900, set())}
+        for va, name in [(0x0307050C, "malloc"), (0x03070C08, "memset"), (0x03070E24, "isspace"),
+                         (0x0307183C, "strtoul")]:
+            self.assertEqual((rows[va].method, name in rows[va].names), ("norm", True))
+        self.assertEqual(rows[0x03070918].method, "norm-near")  # strtol, ratio 0.98
+        self.assertIn("strtol", rows[0x03070918].names)
 
     def test_near(self):
         self.assertIn("malloc", self.rows[0x0307050C].names)
