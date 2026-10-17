@@ -142,3 +142,7 @@ ring `386C0` → RMC/GGA parser `03012774` in the main loop (GP/BD/GN talkers, c
 satellites, altitude); GNSS power is GPIO `0x2C` (`03011914`); RMC time sets the RTC (`03012678`); the periodic
 callback `0002CABC` also restarts the radio when a CPS session stays open for 800 slow ticks. 11 catalog rows updated.
 Details: [GNSS_ANALYSIS.md](GNSS_ANALYSIS.md).
+
+2026-10-17 alert tones (static): code-verified tone engine `03021C1C` → task `03022FB0` → `03022410`; Radio Silent lets
+only the power-on melody `0x0F` and the looped sample sound `0x16` through; key/refusal beeps are dropped during a
+received-call display; tone id table with callers. 5 catalog rows updated. Details: [AUDIO_TONES.md](AUDIO_TONES.md).
