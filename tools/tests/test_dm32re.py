@@ -100,6 +100,21 @@ class Analysis(unittest.TestCase):
         stores = {a.site for a in self.x.accesses_in(0x3E341, 0x3E342) if a.kind == "st"}
         self.assertEqual(stores, {0x0303209A, 0x0303233C, 0x0305CD08, 0x0305CD1C})
 
+    def test_hub_lock_pairing(self):  # HUB_FUNCTIONS.md 2.1-2.3, code-verified
+        # data-flash area reader: pend/post the same mutex 39468 around the raw read
+        calls = [(s, t) for s, t, k in sorted(self.x.callees_of[0x0300F780])]
+        self.assertEqual([t for _, t in calls], [0x0300C500, 0x0300F364, 0x0002B9A0, 0x0300C53C])
+        self.assertEqual(sum(1 for i in self.d.code(0x0300F780) if self.d.literal(i) == 0x39468), 1)
+        # SPI NOR read: CS GPIO 18 low (0002C548) before, high (0002C504) after
+        cs = [t for _, t, k in sorted(self.x.callees_of[0x0002B95C]) if t in (0x0002C504, 0x0002C548)]
+        self.assertEqual(cs, [0x0002C548, 0x0002C504])
+
+    def test_lcd_bus(self):  # HUB_FUNCTIONS.md 3.1, code-verified
+        stores = {(a.addr, a.site) for a in self.x.accesses_in(0x12000000, 0x12000008) if a.kind == "st"}
+        self.assertEqual(stores, {(0x12000000, 0x0002C1D6), (0x12000004, 0x0002C1E2)})
+        movi = [int(i.ops.split(",")[1]) for i in self.d.code(0x030178A4) if i.mnem == "movi"]
+        self.assertEqual(movi, [44])  # DCS Memory Write 0x2C
+
     def test_jump_tables(self):
         self.assertEqual(self.d.jump_tables[0x0002D83E][0], 0x0002D8B6)
         self.assertEqual(len(self.d.jump_tables[0x0002D83E]), 7)

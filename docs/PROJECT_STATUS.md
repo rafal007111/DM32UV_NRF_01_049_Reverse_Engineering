@@ -79,3 +79,11 @@ the `0xFFF` area marker; copy-on-write firmware saves), the data-flash area map,
 stack question (`MATCH_OPTIONS_DESIGN.md` §3.10.9): the ~844/1180 B worst path is a loose static over-approximation,
 most likely benign in stock, not caused by the design; T9 must stay a frameless leaf; stock stack checking is
 advisory only on CK803S. 14 catalog rows updated. No image written, no radio accessed, no CPS word sent.
+
+### Hub functions and display layer (2026-10-17)
+
+Static only. [HUB_FUNCTIONS.md](HUB_FUNCTIONS.md) names the 76 unreviewed hubs with ≥ 10 direct callers (RTOS wrappers,
+data-flash API and SPI NOR commands, GPIO, menu framework, channel/zone helpers) and the display layer (LCD bus
+`0x12000000`, ST7789-class controller, 240 × 320 RGB565 direct write, drawing primitives, fonts in program and SPI data
+flash, status/soft-key bars and popups). 116 catalog rows reviewed: now 377 high, 280 medium, 46 low, 1468 unreviewed.
+No image written, no radio accessed, no hardware test needed.

@@ -48,4 +48,5 @@ Reading order for new work: AGENTS.md, this file, [RE_NOTES.md](docs/RE_NOTES.md
 | Alert tones | [AUDIO_TONES.md](docs/AUDIO_TONES.md) |
 | GNSS / NMEA | [GNSS_ANALYSIS.md](docs/GNSS_ANALYSIS.md) |
 | Settings, CPS, codeplug | [SETTINGS_CPS_ANALYSIS.md](docs/SETTINGS_CPS_ANALYSIS.md), [CHANNEL_RECORD.md](docs/CHANNEL_RECORD.md), user manual `docs/Baofeng_DM-32UV_User_Manual_20250210.pdf` |
+| Hub functions, display driver, fonts | [HUB_FUNCTIONS.md](docs/HUB_FUNCTIONS.md) |
 | Next unattended agent | [NEXT_AGENT_PROMPT.md](docs/NEXT_AGENT_PROMPT.md) |

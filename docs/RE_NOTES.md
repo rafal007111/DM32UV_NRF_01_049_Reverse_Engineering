@@ -254,3 +254,24 @@ Static only, same inputs/tools as T1. No radio access, no image written.
   limit but no hardware trap on CK803S, so a transient single-slice overflow would not be reliably caught. T9
   (`0305CB6C`) must stay a frameless leaf (0 B added).
 - Static analysis only: no serial port opened, no CPS word sent, no radio access, no image file written.
+
+### Hub functions and the display layer (2026-10-17)
+
+Static only (stock `de7dbcbc…`, installed `156a4872…`, GZF `354f9324…` re-checked; binutils 2.42, `tools/dm32`). No radio
+access, no CPS word, no image written. Details: [HUB_FUNCTIONS.md](HUB_FUNCTIONS.md).
+- code-verified (H1): all 76 unreviewed functions with ≥ 10 direct callers named (46 high, 18 medium, 12 low); no extra
+  hub through tail calls, `jsri` or pointers. The top hubs are RTOS wrappers (`0300C500`/`0300C53C` semaphore
+  pend/post as mutex pairs on `39360` LCD, `39468` data flash, `3BD70` tones, `3E34C` channel reload; event-flag
+  wrappers `0300C494`/`0300C4A8`/`0300C464`), the data-flash area API (`0300F780`, `0300F71C`, `0300FA28`) over SPI
+  NOR commands (`06`/`02`/`03`/`20`/`05`, chip select GPIO 18) and GPIO `0002C504` = drive **high**, `0002C548` =
+  drive **low** (pinned by the CS order; the "set/clear" wording in GNSS_ANALYSIS.md §3 and AUDIO_TONES.md was
+  reversed and is corrected there).
+- code-verified (H2): the LCD is driven directly (no frame buffer) through a memory-mapped bus at `0x12000000`
+  (command `+0`, data `+4`) with MIPI-DCS window/memory-write commands; 240 × 320, RGB565, LCD mutex `39360`; init
+  `03017CE4` is an ST7789-class sequence (controller model inferred). Fonts: 12 × 24 ASCII in program flash
+  `0307850C`, 24 × 24 GB2312 hanzi/symbols and 16 × 16 GB2312 in the external SPI data flash (`0x180000`,
+  `0x265000`, `0xC9000`), large/small digit fonts for frequencies. The language flag `3EA04` bit 6 only selects the
+  string of a `{Chinese, English}` pair (`0` Chinese, `1` English). SPI ports at `0x140A0000` (data flash) …
+  `0x14150000` identified (DesignWare-SSI-like layout, inferred).
+- 116 catalog rows reviewed; tagger agreement on them 10/25 decided tags (no display tag; SUBSYSTEM_TAGS.md §7).
+  New tests `Analysis.test_hub_lock_pairing`, `Analysis.test_lcd_bus`.

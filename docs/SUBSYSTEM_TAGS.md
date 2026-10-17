@@ -43,7 +43,7 @@ families and `none` (no evidence: not reached, no strings/I/O/RAM/reviewed neigh
 | `0x16000000` | Audio | 2.0 | byte registers `160009xx`, catalog row `0301E558` (Audio) |
 | `0x14020000`, `0x14100000`, `0x14110000` | GPIO | 1.0 | identical register layout (+0/+4/+30…+3C/+48/+50/+78); `0x14020000` carries the RF 3-wire bit-bang (`0002C2F8`/`0002C340`); inferred GPIO ports |
 | `0x14030000` | UART (second) | 1.0 | same register layout as the GNSS UART (+0/+4/+8/+C/+14); inferred |
-| `0x12000000`, `0x14080000`, `0x140A0000`, `0x140F0000`, `0x14150000` | — | — | not identified; recorded in no tag |
+| `0x12000000`, `0x14080000`, `0x140A0000`, `0x140F0000`, `0x14150000` | — | — | not identified; recorded in no tag (2026-10-17 hub pass: `0x12000000` = LCD bus, `0x140A0000`/`0x14150000` = SPI ports 0/3; [HUB_FUNCTIONS.md](HUB_FUNCTIONS.md) §2.3, §3.1; the tagger itself is unchanged) |
 
 New tag names (not in the catalog before): `Main loop` (reached only from `03013940`), `Startup/init`, `Baseband
 registers`, `Periodic (ScanDisp)`, `Periodic (IRAM callback)`, `Channel knob (CodeSw)` (task `CodeSw` calls the
@@ -165,3 +165,21 @@ spot check. The tagger is unchanged; the reviewed rows now carry their own subsy
 T3 rows (`MATCH_OPTIONS_DESIGN.md` §3.10): of 5 decided `auto:` tags, 4 agree (`Baseband registers`: `0300C0E4`,
 `0300C0E8`, `03023880`, `030239C4`) and 1 disagrees (`0300C4BC`, tagged `Digital TX/DMR`, is a millisecond-delay
 wrapper of `OSTimeDly`); 3 `shared (DMR tasks)` rows were not counted.
+
+## 7. Tag check from the hub pass (2026-10-17, `HUB_FUNCTIONS.md`)
+
+116 rows were reviewed for H1/H2; 53 carried an `auto:` tag, 28 of them `shared (UI tasks)` (true by construction, not
+counted). Of the 25 decided tags **10 agree** (40 %) and **15 disagree**:
+
+| Auto tag | Reviewed | Rows | Agree | Cause of the disagreements |
+|---|---|---|---:|---|
+| `Menu/input` (16) | Menu/UI framework, Text input editor | `03035E68`, `03036BB0`, `0304A1E8`, `03049498`, `03059A64`, `0305AE28`, `03059F08` | 7 | — |
+| `Menu/input` | Display (drawing/fonts/UI widgets) | `03017BE8`, `03018AF4`, `03019BD4`, `03019B80`, `0301AB40`, `0303A4F4`, `0303A4AC` | 0 | no display tag exists; drawing code called from menu scenes |
+| `Menu/input` | Codeplug/channels | `03030560`, `0002DED4` | 0 | called from menu/side-key handlers |
+| `Codeplug/channels` (4) | Codeplug/channels | `03030370`, `0305660C` | 2 | — |
+| `Codeplug/channels` | Storage (data flash), Roaming | `0300FA28`, `03066884` | 0 | RAM evidence (known weak spot, §3) |
+| `Audio/vocoder` (1) | Audio/vocoder | `00018EF4` | 1 | — |
+| `Audio/tones`, `Main loop`, `Recording/privacy`, `Baseband registers` (1 each) | Storage, GPIO, Utility, Display (LCD driver) | `0002BA14`, `0301D0DC`, `0002F088`, `03017CE4` | 0 | shared low-level helpers; `03017CE4` clears bits of `0x1100003C` and so scored `Baseband registers` |
+
+So for low-level hubs the tag is a weak lead; the LCD base `0x12000000` and the SPI bases are now identified but the
+tagger (`tools/dm32re/tag.py`) was not changed in this pass. The reviewed rows carry their own subsystem.
