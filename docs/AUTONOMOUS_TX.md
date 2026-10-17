@@ -1,4 +1,4 @@
-# Transmissions started without the PTT key — DM32.NRF.01.049 (summary, 2026-10-17)
+# Transmissions started without the PTT key — DM32.NRF.01.049 (summary, 2026-10-17; complete path review in `TX_PATHS.md`)
 
 Collected from the static analyses in this repository (no new code analysis; nothing hardware-verified). Each row
 links the document with the code-verified evidence. TX is inferred where the path ends in a known TX routine
@@ -15,17 +15,22 @@ changes none of them.
 | FID `0x10` opcode `0x1E` | queued burst (`030297A4`) | to own ID | `DATA_PATH_ANALYSIS.md` §4.5 |
 | **Roaming search** (periodic or requested) | up to 3 repeater **wake-ups** per roaming candidate whose downlink is not already received | Auto Roaming / interval (zone header), not on Rx Only channels, not while scanning | `RX_CALL_PATH_ANALYSIS.md` §17 |
 | **Lone Worker timer expiry** | **emergency alarm** (same entry as the `Alarm` side key, source 3) | Lone Worker enabled (area `0x10` `0xB00`), channel record `+0x08` bit 0, alarm configured, no key press for the response time | `ALARM_ANALYSIS.md` §3 |
-| Alarm in progress | alarm transmissions; channel reloaded with TX power bits forced to 2 | started by the `Alarm` side key or Lone Worker | `RX_CALL_PATH_ANALYSIS.md` §16.2, `ALARM_ANALYSIS.md` §2 |
+| Alarm in progress | alarm CSBK (request type 9, **queued even when the TX admit policy refuses**, repeated by `0300D284`), then a group voice call; channel reloaded with TX power bits forced to 2 | started by the `Alarm` side key or Lone Worker; alarm type ≠ 1; no Rx Only test found (`TX_PATHS.md` §3) | `RX_CALL_PATH_ANALYSIS.md` §16.2, `ALARM_ANALYSIS.md` §2 |
 | **GPS/APRS position beacon** (periodic) | position text message to the configured ID (`400A4`), optionally on a dedicated beacon channel | interval block 4 `0x301` × 30 ticks (≥ 30), GNSS fix or the `0x302` option, not on Rx Only channels, not while scanning | `GNSS_ANALYSIS.md` §3b |
 | **VOX** (voice-operated TX) | normal voice transmission, as if PTT were pressed | Other Func VOX on (`3E9D4+0x30` bit 0), radio idle (`0305DF8C`), see below | this file §1 |
+| **Analog selective-call decode** (DTMF / 2-tone / 5-tone, 2026-10-17) | acknowledgement tones (`03068D04` → `03068B4C`/`03068C1C`) | analog channel whose signalling system (channel `+0x16` bits 3:1 = 2/4/6) decodes a matching code with response type 2; **no Rx Only test found**; the same decoders can stun (`0xA6`), kill (`0xA5`) or revive (`0xA0`) the radio persistently and restart it | `TX_PATHS.md` §3 |
 | TX admit before an own call (repeater mode) | repeater wake-up | only after PTT (listed for completeness) | `MATCH_OPTIONS_DESIGN.md` §3.6 |
 
-Safe test practice (owner): for RX-only tests use an Rx Only channel where possible, disable Lone Worker, Auto
-Roaming, VOX and the GPS beacon interval in CPS, do not send texts/CSBKs to the radio's own ID from another radio unless a reply transmission is
-acceptable, and do not press `Alarm`.
+Safe test practice (owner, revised 2026-10-17 from `TX_PATHS.md`): for RX-only tests use an Rx Only channel where
+possible (it blocks PTT, VOX, TBST, the beacon, roaming and the CSBK replies, but **not** the alarm or the analog
+decode acknowledgement), disable Lone Worker, Auto Roaming, VOX, the GPS beacon interval and the emergency alarm in
+CPS, set the analog signalling system of test channels to none (or disable decode responses), do not send texts,
+CSBKs or DTMF/2-tone/5-tone codes to the radio from another radio unless a reply transmission is acceptable, and do
+not press `Alarm` or the TBST/Sub PTT side keys.
 
-Not reviewed: the DTMF encoder (PTT-ID send) and TBST (1750 Hz burst, side-key function 30 `TBST Send`); both are
-started by PTT or a key, not automatically (inferred from their triggers; encoders not traced). `0301AC98` is the
+Reviewed 2026-10-17 (`TX_PATHS.md` §3, code-verified): TBST (side key 30 → PTT handler), DTMF/FSK/5-tone PTT IDs
+(start and end of a PTT transmission), the roger beep (end of transmission, `3EA18`) and the DTMF keypad (menu scene)
+are all key-initiated. The CTCSS/DCS tail is still unreviewed. `0301AC98` is the
 **receive** side: an analog call screen that shows a decoded `PTT ID` (name looked up with `03068780`) and plays tone
 `0x16` once when `3FD4C+1` bit 3 is set. Remote Monitor duration: §3.
 

@@ -55,3 +55,10 @@ written, no hardware test needed.
 `tools/dm32 tag` gives 898 of the 1669 unreviewed catalog rows an `auto:` subsystem lead (90.5 % agreement in a
 74-function spot check); the rest are shared across task families (248), have no evidence (114) or stay below the
 threshold. See [SUBSYSTEM_TAGS.md](SUBSYSTEM_TAGS.md). No image written, no hardware test needed.
+
+### Targeted review T1: transmit paths (2026-10-17)
+
+Static only. [TX_PATHS.md](TX_PATHS.md) lists every TX sink (FM_PTT, RF TX link, PA/power, TX queue, chip RF
+interrupts) and every root with its gates; two autonomous analog paths (decode acknowledgement, stun/kill by code) and
+the alarm-CSBK admit bypass were added to [AUTONOMOUS_TX.md](AUTONOMOUS_TX.md). 65 catalog rows reviewed. No image
+written, no radio accessed.

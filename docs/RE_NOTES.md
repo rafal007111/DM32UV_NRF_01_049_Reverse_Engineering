@@ -203,3 +203,18 @@ and a second UART `0x14030000` identified by register layout, inferred), RAM own
 `subsystem = auto: <tag>` (confidence unchanged). Hand spot check: 67 of 74 decided tags agree (90.5 %) after the
 keys-task and startup reach were weakened (they caused 5 of 8 errors in round 1). Details:
 [SUBSYSTEM_TAGS.md](SUBSYSTEM_TAGS.md). No radio access, no image written.
+
+### Targeted review T1: transmit paths (2026-10-17)
+
+Static only (stock `de7dbcbc…`, installed `156a4872…`, GZF `354f9324…`, datasheet `d60f652e…` re-checked; binutils 2.42,
+Ghidra 12.1.4 + CSKY v0.2 + sinc fix 3, `tools/dm32`). No radio access, no image written. Details: [TX_PATHS.md](TX_PATHS.md).
+- datasheet + code: analog TX is keyed through HR_C7000 `FM_PTT` (`0x11000560`, p. 338, `0300C304`); digital RF TX is
+  switched by the chip's `RF_TX_INTERP`/`RF_RX_INTERP` interrupts (vectors 64/65, p. 92/105) through task `rf`
+  (`0300DC94` → `0002B440`/`0002B4A0`: PA GPIO 35/55, power ramp, RF transceiver TX link `0x30 = 0xC1FE`).
+- code-verified: every PTT-like trigger (PTT, VOX, TBST, Sub PTT) passes the PTT handler `0305C334` (voltage, Rx Only,
+  `Tx Limit!`, analog busy lock) and `030149E8` (CPS session, stun); call requests are funnelled through task
+  `CclTraffic` `0301E924` (types 0–10).
+- code-verified, **new autonomous TX**: analog DTMF/2-tone/5-tone decoders in the main loop can answer a matching code
+  with transmitted acknowledgement tones (`03068D04`) and can stun/kill/revive the radio persistently; no Rx Only test
+  on that path (inferred). The emergency-alarm CSBK is queued even when TX admit refuses (`03020DC8`) and is repeated by
+  `0300D284`; no Rx Only test on the alarm path (inferred). `AUTONOMOUS_TX.md` corrected; 65 catalog rows reviewed.

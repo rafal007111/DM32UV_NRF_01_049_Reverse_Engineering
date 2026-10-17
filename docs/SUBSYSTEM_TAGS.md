@@ -144,3 +144,20 @@ All 1669 tagged rows remain `unreviewed`; 248 `shared` rows across task families
 the six IRAM rows `00014164…000141C8` after the kernel (two `Audio/vocoder`, one `Baseband registers`, three below
 the threshold) are leads for later reviews. No hardware test is
 needed for this work.
+
+## 6. Tag check from the targeted TX review (2026-10-17, `TX_PATHS.md`)
+
+36 of the 65 rows reviewed for T1 carried an `auto:` tag; the 12 `shared (…)` rows are true by construction and are not
+counted. Of the 24 decided tags, **5 agree** with the reviewed subsystem (`0002B440`, `0002B4A0` RF; `0300C304`
+Baseband registers — it is the `FM_PTT` register; `030130F0` Main loop; `0305BE0C` Audio) and **19 disagree**:
+
+| Auto tag | Reviewed | Rows | Cause |
+|---|---|---|---|
+| `Digital RX/DMR` | `Digital TX/DMR` | `0300D0A4`, `0300D284`, `0301EAE8`, `03020DC8`, `03020FBC`, `03020FE4`, `03029D3C` | reached from `CclTraffic`/`rxvoice`, which the tagger files as RX tasks; RX and TX are not separated (known weak spot, §3) |
+| `Main loop` | `Analog TX/signalling` | `0306461C`, `03064830`, `03064DBC`, `03067A5C`, `03068B4C`, `03068C1C`, `03068D04` | reach is correct (main-loop step), the subsystem is the analog signalling decoder/responder |
+| `Menu/input` | `Analog TX/signalling` / `TX/PTT` | `03059904`, `03065934` | called from menu scenes |
+| `Audio`, `Audio/tones` | `Analog TX/signalling` | `030601CC`, `03061648` | tone generation on the transmitter |
+| `Scanning` | `Emergency alarm` | `0305E134` | stops the scanner first |
+
+So the tags are a weak lead for transmit code: on TX paths only 5 of 24 (21 %) agree, against 90.5 % in the random
+spot check. The tagger is unchanged; the reviewed rows now carry their own subsystem.
