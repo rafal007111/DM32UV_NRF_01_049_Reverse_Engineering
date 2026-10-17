@@ -4,6 +4,8 @@ Updated 2026-10-15 after the fifth pass (all six work items of the previous prom
 TS Match off design closure, CC Match off completeness, settings storage, remaining internals, catalog hygiene).
 Copy everything below the line into a new agent session on this repository.
 
+For finishing the library names and tagging subsystems (no TS/CC Match work) use [NEXT_AGENT_PROMPT_LIBS_TAGS.md](NEXT_AGENT_PROMPT_LIBS_TAGS.md).
+
 ---
 
 Continue the work on the Baofeng DM32UV, firmware DM32.NRF.01.049 (C-SKY CK803S / HR-C7000, application VA
