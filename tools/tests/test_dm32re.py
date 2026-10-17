@@ -132,6 +132,62 @@ class LibraryId(unittest.TestCase):
         self.assertEqual(strength(1.0, 0.0, 0, 6, 0.0), "weak")  # short functions never count
 
 
+THEAD = Path(os.environ.get("DM32_CSKY_TOOLCHAIN", "/opt/thead-csky-v3.10.29-b20210423"))
+HAVE_THEAD = (THEAD / "csky-elfabiv2" / "lib" / "ck803" / "libc.a").exists()
+
+
+class LibSigDecoding(unittest.TestCase):
+    def test_bsr32_target(self):
+        from dm32re import libsig
+        # T-HEAD objdump 2.27: "30704ec: e00004d2 bsr 0x3070e90" and "30718c4: e3fffaba bsr 0x3070e38"
+        self.assertEqual(libsig.bsr32_target(bytes.fromhex("00e0d204"), 0, 0x030704EC), 0x03070E90)
+        self.assertEqual(libsig.bsr32_target(bytes.fromhex("ffe3bafa"), 0, 0x030718C4), 0x03070E38)
+        self.assertIsNone(libsig.bsr32_target(bytes.fromhex("14d06ccb"), 0, 0x100))
+
+
+@unittest.skipUnless(HAVE_THEAD, "pinned T-HEAD toolchain missing (tools/setup_cloud.sh --with-thead)")
+class LibSigReference(unittest.TestCase):
+    def test_malloc_free_relocations(self):
+        from dm32re import libsig
+        libc = THEAD / "csky-elfabiv2" / "lib" / "ck803" / "libc.a"
+        blob = dict(libsig.ar_members(libc))["malloc.o"]
+        fns = {f.names[0]: f for f in libsig._functions(blob, "libc.a:malloc.o")}
+        free = fns["free"]
+        self.assertEqual(len(free.code), 120)  # .size 112 plus the literal pool behind it
+        self.assertEqual([r.sym.name for r in free.relocs],
+                         ["os_critical_enter", "os_critical_exit", "__malloc_lock", ".data"])
+        self.assertEqual(free.labels, {116: "malloc.o:F"})
+
+
+@unittest.skipUnless(HAVE_IMAGE and HAVE_THEAD, "needs stock image and the pinned T-HEAD toolchain")
+class LibSigStock(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        from dm32re import catalog, libsig
+        img = image.Image("stock")
+        refs = libsig.load_reference(THEAD)
+        rows, _ = libsig.run_match(img, refs)
+        rows += libsig.near(img, refs, rows, catalog.load())
+        cls.rows = {m.va: m for m in rows}
+        cls.strength = staticmethod(libsig.strength)
+
+    def test_exact(self):  # LIBRARY_SIGNATURES.md, code-verified
+        for va, name in [(0x03070B88, "memcpy"), (0x03070A3C, "memcmp"), (0x030705A8, "free"),
+                         (0x03070DA4, "strlen"), (0x030010E4, "strlen")]:
+            self.assertIn(name, self.rows[va].names)
+            self.assertEqual(self.strength(self.rows[va]), "exact")
+
+    def test_relocations_read_back(self):
+        self.assertIn("malloc.o:F", self.rows[0x18000C30].names)
+        self.assertIn("__malloc_lock", self.rows[0x0004A7D0].names)
+        self.assertGreaterEqual(self.rows[0x03070E44].agree, 1)  # os_critical_enter called from free
+
+    def test_near(self):
+        self.assertIn("malloc", self.rows[0x0307050C].names)
+        self.assertGreaterEqual(self.rows[0x0307050C].ratio, 0.95)
+        self.assertNotIn(0x0306F10C, self.rows)  # relocation-only tables never count as near
+
+
 @unittest.skipUnless(shutil.which("analyzeHeadless") or os.path.exists("/opt/ghidra_12.1.4_PUBLIC"),
                      "Ghidra missing")
 class GhidraDecompile(unittest.TestCase):

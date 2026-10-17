@@ -19,6 +19,7 @@ python3 tools/dm32 similar 0302E974      # look-alike functions
 python3 tools/dm32 clusters --min 0.95   # groups of near-identical functions
 python3 tools/dm32 decomp 0301EC40 03017560   # Ghidra C from the GZF; temporary function if Ghidra has none
 python3 tools/dm32 libid build/dm32re/libref --csv out.csv   # library identification (below)
+python3 tools/dm32 libsig --csv out.csv                       # exact T-HEAD library signatures (below)
 python3 -m unittest discover -s tools/tests -v
 ```
 
@@ -65,3 +66,16 @@ Results for the stock image: `analysis/decompiled_modules/libid_ucos3_candidates
 `OSTmrStateGet` (no `OS_ERR_TMR_INACTIVE`, calls only the lock/unlock pair; the tool listed it as shared with
 `OSTmrDel`/`OSTmrStart`, which it is not). `SHARED` rows need that kind of review. Short functions (`ASCII_*`, `Str_*`)
 match by accident and are reported weak; uC/LIB presence in the firmware is not established.
+
+## Exact library signatures (2026-10-17)
+
+`python3 tools/dm32 libsig` (`tools/dm32re/libsig.py`, stdlib only, no binutils, < 2 s) matches every function of
+the pinned T-HEAD toolchain's ck803 archives against the image with relocation bytes masked, reads the relocations
+back from the firmware (call targets, data labels, string literals) and adds a near pass for call targets and the
+library block. It needs `--toolchain` or `DM32_CSKY_TOOLCHAIN` (`tools/setup_cloud.sh --with-thead`). Results,
+strength rules and the vendor-compiler fingerprint: [LIBRARY_SIGNATURES.md](LIBRARY_SIGNATURES.md); CSV
+`analysis/decompiled_modules/libsig_thead_matches.csv`. Tests: `LibSigDecoding`, `LibSigReference`, `LibSigStock`.
+
+`build_ucos3.sh` honours `CC`, so the uC/OS-III corpus can be built with the T-HEAD compiler
+(`CC=$DM32_CSKY_TOOLCHAIN/bin/csky-elfabiv2-gcc bash tools/libref/build_ucos3.sh <src> build/dm32re/libref_thead`);
+its `libid` results are in `analysis/decompiled_modules/libid_ucos3_thead_candidates.csv` (inferred).

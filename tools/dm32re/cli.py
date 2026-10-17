@@ -6,6 +6,7 @@ All commands are read-only static analysis of the private stock image (or --imag
 from __future__ import annotations
 
 import argparse
+import os
 import re
 import sys
 from functools import cached_property
@@ -219,7 +220,18 @@ def main(argv=None):
     s.add_argument("--min", type=float, default=0.75)
     s.add_argument("--csv", help="write candidates to this CSV")
     s.add_argument("--all", action="store_true", help="also print weak candidates")
+    s = sub.add_parser("libsig", help="exact T-HEAD library signatures (see libsig.py); no binutils needed")
+    s.add_argument("--toolchain", default=os.environ.get("DM32_CSKY_TOOLCHAIN", ""),
+                   help="pinned T-HEAD toolchain root (default: $DM32_CSKY_TOOLCHAIN)")
+    s.add_argument("--csv", help="write all rows to this CSV")
+    s.add_argument("--all", action="store_true", help="also print short and lead rows")
+    s.add_argument("--no-near", action="store_true", help="skip the near (similarity) pass")
     a = p.parse_args(argv)
+    if a.cmd == "libsig":
+        from . import libsig
+        if not a.toolchain:
+            p.error("libsig needs --toolchain or DM32_CSKY_TOOLCHAIN")
+        return libsig.run(a)
     if a.cmd == "decomp":
         cmd_decomp(None, a)
         return 0

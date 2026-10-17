@@ -30,3 +30,9 @@ Nothing built into an image, installed or hardware-tested.
 The pinned T-HEAD V3.10.29 B20210423 compiler also exists as a native x86_64 Linux build; `tools/setup_cloud.sh --with-thead`
 and `firmware/build_csky.sh` reproduce the installed scanner module byte for byte (`b66ca064…`) and the installed image
 in memory (`156a4872…`). Byte-exact target builds no longer require the owner's Windows machine.
+
+### Library signatures (2026-10-17)
+
+`tools/dm32 libsig` names 27 C-runtime catalog rows from the pinned T-HEAD libraries (exact or near byte matches);
+1892 rows remain unreviewed. The vendor used a different toolchain release than V3.10.29 (code-verified
+fingerprint). See [LIBRARY_SIGNATURES.md](LIBRARY_SIGNATURES.md).
