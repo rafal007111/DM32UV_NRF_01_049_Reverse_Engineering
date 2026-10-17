@@ -334,3 +334,44 @@ the editors that `03059C14(n)` sets up store the maximum length `n` in `18000ABC
 
 `0x67` reader `03057620` (role); Display Func storage of the four items not in the manual; the getter id `0x30`
 caller and what it would control.
+
+## 11. Codeplug compatibility rules for mods (2026-10-17, targeted review T2, partial)
+
+Static only. This pass did not produce a new CPS command table (`CPS_PROTOCOL.md` was not written). The frame
+table in §3 is incomplete for the `PROGRAM` session (`0302A448`): a later read of that loop found more frame types than
+§3 lists and a different address encoding from the `SYSINFO` loop `03029FB0`; those details were not documented in
+this pass and §3 must be re-checked before anyone relies on it.
+
+What the firmware answers (code-verified, earlier sections):
+
+- Block 4 `0x60`: readers `0304B010` (bits 0/1) and `0304B158` settings 9/10 (read-modify-write, `0300FA28`); no other
+  reader or bulk read covers bits 2–7 (§9.2), and the only variable-length writer near it (`030610D8`, `0x50`) is
+  unreachable (§10.1).
+- The firmware's data-flash writers (`0300F878`, `0300FA28`, `0300FB58`) copy a whole 4 KiB area through a spare
+  block and patch only the requested bytes, so firmware-side saves never clear unknown bits (structure code-verified).
+- After a CPS `PROGRAM` session the radio restarts (§3.1), and `0304B010` reloads block 4 at boot, so a value written by
+  CPS takes effect on the next start.
+
+What only the PC CPS can answer: whether it writes back bytes it does not model (bits 2–7 of `0x60`, `0x85` bit 4,
+`0x67`) unchanged, sets them to 0, or rewrites them from a template.
+
+Rules for mods:
+
+1. Store new options only in bits that the firmware never reads today and whose value 0 means "stock behaviour"
+   (block 4 `0x60` bits 2/3 for CC/TS Match off).
+2. Never repurpose bytes the CPS models (channel, zone, contact, scan list records); a per-channel option would need
+   CPS support.
+3. Treat any option as volatile across CPS writes until the owner check below shows it survives.
+4. Do not change the CPS session code, the handshake words or the restart after `PROGRAM`.
+
+Owner check (**this writes the radio — owner decision**): with stock firmware, CPS read → save file A; write file A back
+unchanged; CPS read → save file B; compare A and B offline (they should be identical). Then set PCall Match on the
+radio, read → file C, and confirm that only area 4 byte `0x60` bit 0 differs from A. A tool that can set bit 2 of
+`0x60` in a saved file (e.g. a hex editor on the CPS file, if its format is known) would then show whether a CPS write
+→ read keeps it.
+
+Open questions for the owner: which CPS version is used, and is its codeplug file format documented anywhere (a raw
+image of area 4 would make the check above a pure file comparison)?
+
+Left unreviewed: the complete `PROGRAM` frame table, the read/write address map of the CPS session and the
+CPS-tagged helper functions (`0002BAB0…0002C164`, `0301C8E0…0301C98C`, `03066F70…030674F0`).
