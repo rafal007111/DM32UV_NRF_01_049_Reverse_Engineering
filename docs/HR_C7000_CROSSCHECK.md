@@ -226,3 +226,15 @@ datasheet's 2000 is not established (it may compensate the RF chip's audio path;
 - Together these show that the firmware puts the chip into its **repeater-style receive configuration**, which
   matches the §3.2 finding that every slot is received. Whether `is_repeater` changes anything else on a simplex
   channel is not described in the datasheet (open).
+
+## 9. Registers identified in the targeted review (2026-10-17)
+
+Inputs as in §0; details in `TX_PATHS.md` §1 and `MATCH_OPTIONS_DESIGN.md` §3.10.
+
+| Register / area | Datasheet | Firmware (code-verified) | Verdict |
+|---|---|---|---|
+| `FM_PTT` (`0x560`) bit 0 | §11.2.2.25, p. 338: "FM transmit PTT, active high" | `0300C304(on)` is the only writer (plus IRAM save/restore `000169D8`/`00016AD0`); called by the analog TX start/end and tone senders | datasheet + code: analog transmit key |
+| `INTERP_CLEAR` (`0x3B0`) bits 2/3 | §4.6.5.15, p. 105: clear RF transmit-start / RF receive-start interrupt (bits 0/1 TX/RX 30 ms slot, 4/5 PCM) | ISRs `0002C404` (vector 64) and `0002C3D8` (vector 65) set bits 2/3, then post task `rf` | datasheet + code: `RF_TX_INTERP` / `RF_RX_INTERP` (interrupt table 28, p. 92) switch the external RF stage for digital TX |
+| Link-layer TX RAM `0x16000000` | table 52, p. 312 | `0300D3EC(off, src, n)` byte copy into it (TX burst loader, direct CSBK) | datasheet + code |
+| Link-layer RX RAM `0x160004B0` | table 53, p. 313 | `0300D41C(off, dst, n)` byte copy from it (all RX handlers) | datasheet + code |
+| `LAYER2_STATUS` (`0x41C`) | p. 309 | `03023880` (RX slot abnormal, dispatcher bit 6) reads it three times and returns | datasheet + code (read to acknowledge, inferred) |

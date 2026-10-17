@@ -62,3 +62,9 @@ Static only. [TX_PATHS.md](TX_PATHS.md) lists every TX sink (FM_PTT, RF TX link,
 interrupts) and every root with its gates; two autonomous analog paths (decode acknowledgement, stun/kill by code) and
 the alarm-CSBK admit bypass were added to [AUTONOMOUS_TX.md](AUTONOMOUS_TX.md). 65 catalog rows reviewed. No image
 written, no radio accessed.
+
+### Targeted review T2 (partial) and T3 (2026-10-17)
+
+TS/CC Match storage stays block 4 `0x60` bits 2/3 (CPS preservation still an owner check that writes the radio);
+static risk review of the TS/CC Match sites in `MATCH_OPTIONS_DESIGN.md` §3.10 (one new design rule, R1). The CPS
+command table was not completed. No image written, no radio accessed.

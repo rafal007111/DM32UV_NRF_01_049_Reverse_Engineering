@@ -218,3 +218,16 @@ Ghidra 12.1.4 + CSKY v0.2 + sinc fix 3, `tools/dm32`). No radio access, no image
   with transmitted acknowledgement tones (`03068D04`) and can stun/kill/revive the radio persistently; no Rx Only test
   on that path (inferred). The emergency-alarm CSBK is queued even when TX admit refuses (`03020DC8`) and is repeated by
   `0300D284`; no Rx Only test on the alarm path (inferred). `AUTONOMOUS_TX.md` corrected; 65 catalog rows reviewed.
+
+### Targeted review T2 (partial) and T3: storage and TS/CC Match site risks (2026-10-17)
+
+Static only, same inputs/tools as T1. No radio access, no image written.
+- T2 (partial): storage decision kept — block 4 `0x60` bits 2/3, `0 = stock`; firmware writers preserve unknown bits;
+  CPS preservation needs the owner check in [SETTINGS_CPS_ANALYSIS.md](SETTINGS_CPS_ANALYSIS.md) §11 (it writes the
+  radio). The §3 frame table is incomplete for the `PROGRAM` loop; a full CPS command table was not produced.
+- T3 ([MATCH_OPTIONS_DESIGN.md](MATCH_OPTIONS_DESIGN.md) §3.10): all receive-gate sites run only in task `sysint`
+  (stack margin ≈ 720 B), T7 in `rxvoice`, T9 in `keys` (a stock static path exceeds the 768-B `keys` stack — open).
+  New risk R1: `txslot` (priority 12) can pre-empt `sysint` and reset `3BEAB`/`3C61A`, so the T5/T6 restore must be
+  compare-and-write inside `CPU_SR_Save`/`Restore`. Burst-loss timer, scanner, recording and Call Log interactions are
+  code-verified; `cc_opt = 1` adds no load beyond stock Monitor (inferred). New registers in
+  [HR_C7000_CROSSCHECK.md](HR_C7000_CROSSCHECK.md) §9 (`FM_PTT`, `INTERP_CLEAR`, TX/RX link RAM). 11 catalog rows.

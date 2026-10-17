@@ -161,3 +161,7 @@ Baseband registers — it is the `FM_PTT` register; `030130F0` Main loop; `0305B
 
 So the tags are a weak lead for transmit code: on TX paths only 5 of 24 (21 %) agree, against 90.5 % in the random
 spot check. The tagger is unchanged; the reviewed rows now carry their own subsystem.
+
+T3 rows (`MATCH_OPTIONS_DESIGN.md` §3.10): of 5 decided `auto:` tags, 4 agree (`Baseband registers`: `0300C0E4`,
+`0300C0E8`, `03023880`, `030239C4`) and 1 disagrees (`0300C4BC`, tagged `Digital TX/DMR`, is a millisecond-delay
+wrapper of `OSTimeDly`); 3 `shared (DMR tasks)` rows were not counted.
