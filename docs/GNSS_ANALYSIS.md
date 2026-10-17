@@ -67,6 +67,18 @@ Dead code (inferred: no `bsr` and no pointer word in the image): `03011C78` send
 (`0301D92C`, the only use of the `\r\n` constant `030825E4` found) and `03011CC4` would send the raw RMC sentence as
 message type 4 through `0305CD88`. Neither has a Ghidra function or a caller.
 
+## 3b. Automatic position beacon (code-verified flow; names inferred)
+
+| Item | Evidence |
+|---|---|
+| Configuration (boot `03062650` from `0305F674`; menu writers `0304CF70`/`0304CF90`/`0304CFEC`, `0304B158`) | block 4 `0x301` × 30 → `400A0` (beacon interval in ticks); `0x302` bit 0 → `4009C` bit 2 (send without a GNSS fix, inferred); `0x331` bit 0 → `4009C` bit 1 (first argument of the sender, call type inferred); `0x332..0x334` → `400A4` (destination ID, 0 → 1); `0x306`/`0x310` (9 bytes each), `0x30F`, `0x319` → `400AA..400BD` (unreviewed text fields); `4009E` = beacon channel number (written by the channel loader `03057790` and `03062828`) |
+| Timer | `03062D80`, called from the periodic handler `0305490C` (same as roaming and Lone Worker): counter `400A8` vs `400A0`; requires an interval ≥ 30 ticks, scanner idle (`0302ED04() == 0`), `320CB == 0`, `3E334+7` bits 6:5 clear, current channel **not Rx Only** (`3E200` bit 3), and a valid fix (`38C88` bit 6) or `4009C` bit 2 |
+| Send | `03062CD4`: if a beacon channel is set (`4009E ≠ 0`) reloads with reason `0x16`, otherwise reason `0x13` when needed; on a digital or mixed channel (type nibble 1 or 3, forced to 1) calls `03062A54(4009C bit 1, 400A4)`, the RMC position text sender (`DATA_PATH_ANALYSIS.md` §6) → a **data transmission** |
+| Manual send | side-key function 31 **`APRS Send`** (`0301571C`, uncatalogued) → `03062CD4` |
+
+So with a beacon interval configured the radio **transmits its position periodically by itself**, also without a GNSS fix
+when the `0x302` option is set. It is skipped on Rx Only channels.
+
 ## 4. Open questions (owner) and RX-only checks
 
 1. Does the radio set its clock from GNSS? Expected (code): with GNSS on and a fix, the clock jumps to UTC adjusted

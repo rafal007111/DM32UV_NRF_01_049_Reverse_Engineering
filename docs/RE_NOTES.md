@@ -177,3 +177,5 @@ TX inferred from the alarm path). Details: [ALARM_ANALYSIS.md](ALARM_ANALYSIS.md
 2026-10-17 summary of every stock path that can transmit without PTT (CSBK/data replies, roaming wake-ups, Lone Worker alarm, alarm): [AUTONOMOUS_TX.md](AUTONOMOUS_TX.md).
 
 2026-10-17 VOX (static): `030624C0` compares ADC channel 1 (`0301CA8C`, MMIO `0x140D0000`) with a 9-level threshold table and synthesizes PTT press/release events (`03014DD8(4/8)`), release after VOX Delay (`3EA33`). Added to [AUTONOMOUS_TX.md](AUTONOMOUS_TX.md) §1.
+
+2026-10-17 GPS/APRS beacon (static): `03062D80` (periodic handler `0305490C`) sends the position via `03062CD4` → `03062A54` every block-4 `0x301` × 30 ticks when a fix is valid (or the `0x302` option), not on Rx Only channels; side key `APRS Send` sends once. Details: [GNSS_ANALYSIS.md](GNSS_ANALYSIS.md) §3b; added to [AUTONOMOUS_TX.md](AUTONOMOUS_TX.md).

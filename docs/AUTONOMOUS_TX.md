@@ -16,15 +16,15 @@ changes none of them.
 | **Roaming search** (periodic or requested) | up to 3 repeater **wake-ups** per roaming candidate whose downlink is not already received | Auto Roaming / interval (zone header), not on Rx Only channels, not while scanning | `RX_CALL_PATH_ANALYSIS.md` §17 |
 | **Lone Worker timer expiry** | **emergency alarm** (same entry as the `Alarm` side key, source 3) | Lone Worker enabled (area `0x10` `0xB00`), channel record `+0x08` bit 0, alarm configured, no key press for the response time | `ALARM_ANALYSIS.md` §3 |
 | Alarm in progress | alarm transmissions; channel reloaded with TX power bits forced to 2 | started by the `Alarm` side key or Lone Worker | `RX_CALL_PATH_ANALYSIS.md` §16.2, `ALARM_ANALYSIS.md` §2 |
+| **GPS/APRS position beacon** (periodic) | position text message to the configured ID (`400A4`), optionally on a dedicated beacon channel | interval block 4 `0x301` × 30 ticks (≥ 30), GNSS fix or the `0x302` option, not on Rx Only channels, not while scanning | `GNSS_ANALYSIS.md` §3b |
 | **VOX** (voice-operated TX) | normal voice transmission, as if PTT were pressed | Other Func VOX on (`3E9D4+0x30` bit 0), radio idle (`0305DF8C`), see below | this file §1 |
 | TX admit before an own call (repeater mode) | repeater wake-up | only after PTT (listed for completeness) | `MATCH_OPTIONS_DESIGN.md` §3.6 |
 
-Safe test practice (owner): for RX-only tests use an Rx Only channel where possible, disable Lone Worker and Auto
-Roaming in CPS, do not send texts/CSBKs to the radio's own ID from another radio unless a reply transmission is
+Safe test practice (owner): for RX-only tests use an Rx Only channel where possible, disable Lone Worker, Auto
+Roaming, VOX and the GPS beacon interval in CPS, do not send texts/CSBKs to the radio's own ID from another radio unless a reply transmission is
 acceptable, and do not press `Alarm`.
 
-Not reviewed: the DTMF/TBST paths, APRS/GPS beacon timers (`GPS Beacon` string, no timer
-traced), Remote Monitor duration (`3FD78`).
+Not reviewed: the DTMF/TBST paths, Remote Monitor duration (`3FD78`).
 
 ## 1. VOX (2026-10-17, code-verified flow; signal names inferred)
 
