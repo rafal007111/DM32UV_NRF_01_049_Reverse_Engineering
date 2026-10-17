@@ -573,10 +573,20 @@ with the 24-bit ID, the RTC time (`0301C238`) and a value divided by 10 (call du
 copy-on-write writers `0300FB58`/`0300FDA4`. For kind 1 it also increments `33508+0x12` (unless `0xFF`) — a new-entry
 counter shown by the UI (inferred: missed-call badge).
 
-Mapping to the menu items `Missed` / `Answered` / `Sent` (lists `030B9030`/`030B9250`): bit 4 of `3E0E8` is set by the
-own-call start `0305C1E0` and by `0302DBEC`, and bit 0 by the RX call-start display `0305E3F0`. The most likely reading
-is kind 1 = Missed (counter + caller), kind 2 = Sent, kind 3 = Answered, but this is **inferred**; the flag writers in
-`0302DBEC`/`0302C4FC` were not fully traced. The `Missed Call` popup (`030BA748`, `03035D2C`) is consistent with kind 1.
+Flag writers of `3E0E8` (traced 2026-10-17, code-verified):
+
+| Bit | Set by | Condition | Cleared by |
+|---|---|---|---|
+| 0 and 1 | `0302C4FC` (from `0302C54C`) | displayed call is private (`3E0DC+0x14 == 1`), not the radio's own call (bit 4 clear), RX destination `3BA60 == 3F018` (own ID), **Missed Call Alert** on (`3E9D4+0x6F` bit 0 = block 4 `0x65` bit 0, `DATA_PATH_ANALYSIS.md` §9) and Monitor off (`3E341` bit 1) | bit 1 after logging kind 1 (`0302DF8A`); bit 0 when PTT answers that caller (`0305C2C4`) or by the call-display end in `0302DBEC` (`0302DD14`, which then shows the popup path) |
+| 2 | `0305EA58` (psint handler) | `3E0DC+0x1C == 1` | after logging kind 2/3 (`0302DFDE`) |
+| 4 | `0305C1E0` (PTT target selection) | PTT during the display of a private call (`3E0DC+0x14 == 1`) to the displayed source (`3E0DC+0x10 == target`) | `0302DBEC` (`0302DC82`) at display end |
+
+So kind 1 is written for **every received private call to the own ID while Missed Call Alert is enabled**, and the
+`3E0E8` bit 0 that survives until the display ends marks it as not answered. Kinds 2 and 3 are written after a
+`3E0DC+0x1C == 1` event, split by bit 4 (the user pressed PTT back to the private caller). Matching the menu order
+`Missed`, `Answered`, `Sent` to areas `0x0C`, `0x0D`, `0x0E` is the simplest reading but remains **inferred**; in
+particular it is not established whether "Answered" means "a reply was sent" (bit 4). The `Missed Call` popup
+(`030BA748`, `03035D2C`) is consistent with kind 1 plus bit 0.
 
 Data-flash areas `0x0C`–`0x0E` are added to the map in §16.1.
 
@@ -585,7 +595,8 @@ Data-flash areas `0x0C`–`0x0E` are added to the map in §16.1.
 1. CPS (read only): which CPS list fills data-flash area 16 (key id + 32-byte key)? Compare a codeplug with one
    AES-256 key entered against one without (PC-only file comparison).
 2. ~~Does the Call Log survive a power cycle?~~ Code: yes, it is stored in data flash (§16.3). RX-only check of the kind
-   mapping: miss a private call (do not answer), then open Call Log → Missed; expected: one new entry with the caller ID.
+   mapping (needs Missed Call Alert on in CPS): receive a private call to your ID without pressing PTT, then open
+   Call Log → Missed; expected: one new entry with the caller ID. Answering by PTT is a transmission — owner decision.
 3. Alarm power: not to be tested by transmitting; read the channel's power setting in CPS only.
 
 ### 16.5 Not reviewed
