@@ -563,3 +563,37 @@ cannot attribute. Next step: decompile the three viewer entries above and follow
 
 Areas 2, 3, 6, 10, `0x5C`, `0x65`–`0x67` roles; the Call Log record source; `03030560` reasons 5, 9, 10, 18–27;
 `0301F074`.
+
+## 17. Roaming search (2026-10-17, code-verified flow; names inferred)
+
+Storage is in §16.1 (areas `0x65`/`0x66`, RAM state `40144`). Static only; no radio access.
+
+**Trigger** `03066824` (called from `0305490C`, a handler reached through the pointer at `03054768`; tick source
+unreviewed): increments `40140`; when it reaches the interval `(40144 word & 0xFFFFFF) >> 8` = header byte 2 × 60
+(minutes if the counter ticks once per second, inferred) or the request flag `40142` is set, and the scanner is idle
+(`0302ED04() == 0`) and `320CB == 0`, it clears both, calls `03054F90`, and — unless `3E334+7` bits 6:5 are set or the
+current channel is Rx Only (`3E1F8+8` bit 3) — runs the search `03066608`.
+
+**Search** `03066608`: walks the members of the current roaming zone (count `40144+5`, index `4015C`, wraps), for each
+candidate sets `40144` bit 1, reloads the channel with reason `0x18` (`03030560(0x18)`, §16.2) and tests it with
+`0301FE28`:
+
+| `0301FE28` step | Code |
+|---|---|
+| repeater downlink already seen (`030272D4()`: `3BEAF == 1`) | return 0 = usable, **no transmission** |
+| otherwise, up to 3 tries | abort if RX is suspended (`3BA6D` bit 0) or `3FDD8` bit 2; `03029C3C(0xFFFFFF, 33CC8+0x24)` — the repeater **wake-up** used by TX admit (`MATCH_OPTIONS_DESIGN.md` §3.6), so this step **transmits**; `3BA3C[0] = 2`, `03023290(1, 2)`; wait up to 300 ms for event `0x10000000` (repeater downlink seen, §1.4) |
+| result | 0 when a try succeeded (or `0300CFD8(4, 4)` UI note), 1 after three failures or an abort (`0300C78C(0x1000)`, `0300CFD8(4, 1)`) |
+
+On the first usable candidate the search copies its RX/TX frequencies and `+0x0D` CC/slot bits into the channel buffer `3E374`
+(VFO A, inferred) or `3E238` (VFO B, inferred) depending on `3E9D4+0x2D` bit 7, marks `40144` bits 3/4 and 2, and stores the member in `40144+4`. If no
+candidate answers, it reloads with reason `0x19` and shows `0300CFD8(4, 1)`.
+
+**TX/PTT relevance (inferred):** an automatic roaming search can key the transmitter for repeater wake-ups on every
+roaming candidate whose downlink is not already being received. It is skipped on Rx Only channels. This is stock
+behaviour, documented only; the TS/CC Match work does not touch it.
+
+Owner check (no TX needed): in CPS, note whether Auto Roaming and its interval are enabled; if disabled, the trigger
+should only run on a manual request (`40142`).
+
+Not reviewed: the tick source of `03066824`, `03054F90`, `0300CFD8` message ids, the manual `Roaming Search`/`One time
+Roam` menu paths, RSSI thresholds (none were seen in this path — the test is downlink presence, not signal level).

@@ -151,3 +151,9 @@ received-call display; tone id table with callers. 5 catalog rows updated. Detai
 zone records) and `0x66` the roaming channels (0x1A-byte records), loaded at boot by `03066424`, which reformats them
 with `Roam Zone 1`/`Roam Channel 1` defaults; `3E9D4+0x30` bit 6 selects English (1) vs Chinese (0). The roaming
 decision logic is unreviewed. Details: [RX_CALL_PATH_ANALYSIS.md](RX_CALL_PATH_ANALYSIS.md) §16.1.
+
+2026-10-17 roaming search (static): code-verified periodic trigger `03066824` (interval = zone header byte 2 × 60
+ticks, skipped on Rx Only channels and while scanning) and search `03066608`; each candidate is tested by `0301FE28`,
+which accepts it at once when the repeater downlink is already received and otherwise sends up to three repeater
+wake-ups (`03029C3C`, a transmission) waiting 300 ms each for the downlink event. Details:
+[RX_CALL_PATH_ANALYSIS.md](RX_CALL_PATH_ANALYSIS.md) §17.
