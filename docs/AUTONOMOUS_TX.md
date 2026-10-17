@@ -57,5 +57,5 @@ IRAM periodic callback 0002CABC          — every 10th call: event bit 0 on 3FD
 So one ScanDisp tick = 1000 calls of `0002CABC`. The beacon interval (`× 30`), the roaming interval (`× 60`) and the
 Lone Worker response time (`× 60`) are counted in ScanDisp ticks, which fits a 1-second tick with intervals in units
 of 30 s / 1 min / 1 min **if** `0002CABC` runs every millisecond (period of the timer not established).
-The ScanDisp task skips the beacon and roaming steps while `33508+0x12` is non-zero, `3FDD9` bit 1 or `3E338` bit 2 is
+The ScanDisp task skips the beacon and roaming steps while `3E172` (scan state `3E160+0x12`) is non-zero, `3FDD9` bit 1 or `3E338` bit 2 is
 set, a menu scene (`320CB` 1…`0x3F`) is open, or `030649A8()` is neither 0 nor 1.
