@@ -15,7 +15,7 @@ and tools as in `HR_C7000_CROSSCHECK.md` §0. Builds on `MONITOR_ANALYSIS.md` §
   - while `3FDEC & 3` (bit 0 = call display, `RX_CALL_PATH_ANALYSIS.md` §1.3) ids `0x10`–`0x14` and `0x21` are dropped,
     so key/refusal beeps are suppressed during a received call;
   - sets `3E334+7` bit 3 (tone active), mutes the RX path (`0300E360` when `3FDEC` bit 2), on analog channels
-    `0002B550`, GPIO `0x2F` on (`0002C548`), audio route `03055BF8`/`03055C28`, `0301E4F0(1)`, amplifier `0301D624(1)`.
+    `0002B550`, GPIO `0x2F` driven low (`0002C548`; "on" if the line is active-low, HUB_FUNCTIONS.md §2.3), audio route `03055BF8`/`03055C28`, `0301E4F0(1)`, amplifier `0301D624(1)`.
   - patterns are sequences of `03021C88(duration, f1, f2, f3, f4, l1, l2, l3, l4)` (up to four simultaneous
     components; reading of the arguments as durations/frequency words/levels is **inferred**, units unverified),
     `03021FE0`/`03021DE0` (variants), `0302215C(n)` pauses (inferred).

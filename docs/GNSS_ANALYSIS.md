@@ -43,7 +43,7 @@ matches the menu string `GPS + BDS` (`030BD268`).
 
 | Function | Behaviour |
 |---|---|
-| `03011804` (boot, from `0305F674`) | resets the ring state, drives GPIO `0x2C` from `38C88+0xD8` bit 0 (`0002C548` = set, `0002C504` = clear), creates task `gps` |
+| `03011804` (boot, from `0305F674`) | resets the ring state, drives GPIO `0x2C` from `38C88+0xD8` bit 0 (bit set → `0002C548`, bit clear → `0002C504`; electrically `0002C548` drives the pin low and `0002C504` high, HUB_FUNCTIONS.md §2.3), creates task `gps` |
 | `03011914(on)` (from `0304D6B0`, a settings handler) | `on = 1`: `38C88+0xD8` bit 0 = 1 and GPIO `0x2C` set (GNSS power on, inferred); `on = 0`: GPIO cleared, fix state, ring and line buffer zeroed |
 | IRAM `0002CABC` (periodic callback, pointer at `0301D850`) | every 10th call: event 1 on `3FDB0`; if `38C88` bit 5 has stayed set for > 150 slow ticks, clears the GNSS buffers (no-data timeout); **if `3FDD8` bits 6/1 = `10` (CPS session open, not `PCTESTM`) for > 800 slow ticks → restart `0305F2F4`** (CPS session watchdog) |
 
