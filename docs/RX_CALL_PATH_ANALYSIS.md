@@ -520,7 +520,7 @@ Whether these are the CPS "enhanced" and "basic" privacy lists is **open** (qdmr
 ### 16.2 Channel reload reason `3E335` = load mode of `03057790` (code-verified call sites; names from the side-key table)
 
 `03030560(r)` stores `r` in `3E335` (`3E334+1`, its only writer by `tools/dm32 acc`), sets `3E338` bit 2 and calls
-the event API `0300C494(3FDB0, 8)` and `…(3FDB0, 4, …)` (event semantics unreviewed); the channel/mode change path
+`0300C494(3FDB0, 8)` (event post — the GNSS UART ISR uses the same call to post bit 20, `GNSS_ANALYSIS.md` §1) and then waits with `…(3FDB0, 4, …)`; the channel/mode change path
 `03031FD4` passes `3E335` as the load mode: `030584E4(channel, 3E335)` at `030321AA` → `03057790(channel, mode)`
 (that `03031FD4` runs as a consequence of `03030560` is inferred). The constants
 passed to `03030560`, with the side-key handlers identified through the handler table `030728DC` (RAM copy

@@ -136,3 +136,9 @@ Ghidra 12.1.4 + CSKY v0.2 + sinc fix 3, `tools/dm32`). No radio access, no image
   The TS/CC Match candidate module, build and in-memory patch plan (work items 2–4 of `NEXT_AGENT_PROMPT.md`) were
   **not** produced in this pass; only the flag-storage header `firmware/source/match_flags.h` and the interface
   header `match_options.h` exist.
+
+2026-10-17 GNSS input (static, same inputs/tools): code-verified UART ISR `0002CCE4` → task `gps` `03011A80` → 1 KiB
+ring `386C0` → RMC/GGA parser `03012774` in the main loop (GP/BD/GN talkers, checksum, fix, lat/lon, speed, course,
+satellites, altitude); GNSS power is GPIO `0x2C` (`03011914`); RMC time sets the RTC (`03012678`); the periodic
+callback `0002CABC` also restarts the radio when a CPS session stays open for 800 slow ticks. 11 catalog rows updated.
+Details: [GNSS_ANALYSIS.md](GNSS_ANALYSIS.md).
