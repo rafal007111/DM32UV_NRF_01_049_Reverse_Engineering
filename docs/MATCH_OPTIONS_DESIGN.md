@@ -372,7 +372,7 @@ calls through pointers are not followed, interrupt frames use the separate ISR s
 | C3 | `03028180` | `03028644` | `sysint` | 132 B | — |
 | T5, T6 | `030239D4` call sites | task `sysint` | `sysint` | the wrapper frame adds to every path below it (keep ≤ 16 B) | see §3.10.2 |
 | T7 | `030207AA` | task `rxvoice` `030206D0` | `rxvoice` (24, 384 words = 1536 B) | 360 B | large margin |
-| T9 | `0305CB6C` | `0305C334` ← task `keys` `03012D2C` (event 8) | `keys` (7, 192 words = 768 B) | site at depth 96 B; **stock** worst static path 1224 B (`0305C334` → menu redraw `0303B6AC` → `sprintf` `030704C4`) | the static path exceeds the stack: either infeasible or a latent stock risk (inferred, not caused by the design); keep T9 a frameless leaf |
+| T9 | `0305CB6C` | `0305C334` ← task `keys` `03012D2C` (event 8) | `keys` (7, 192 words = 768 B) | site at depth 96 B; **stock** worst static path ~844 B (no-float) / ~1180 B (float) exceeds the 768 B stack — **resolved in §3.10.9**: a loose over-approximation, most likely infeasible/benign in stock, not caused by the design | keep T9 a **frameless leaf** (adds 0 B) — see §3.10.9 |
 | C6 | `0301E73C` (`0301E580`) | `03056330` ← channel loader `03057790` (main, `CodeSw`, `keys`, menu contexts), PCTESTM `030215C8`, menu `03038034` | several | `0301E580` depth 112 B | bit change only |
 | C7 | `0301EC40` | `0305CCF0` (Monitor key in `keys`, alarm entry), `03031FD4` (`CodeSw`) | several | small | bit change only |
 | T10 | `0302BB56` (`0302B9A4`) | `0302C200`, `0302C350` (UI) | UI | — | display only |
@@ -436,7 +436,7 @@ Monitor** (inferred); owner check below.
 | Item | Status |
 |---|---|
 | Execution context of every site | resolved (§3.10.1) |
-| Stack budget | resolved for `sysint`/`rxvoice`; `keys` has a stock static path above its stack (not caused by the design; open) |
+| Stack budget | resolved for `sysint`/`rxvoice`; `keys` stock static path above its stack resolved in §3.10.9 (over-approximation, most likely benign, not caused by the design; T9 must stay a frameless leaf) |
 | Re-entrancy / shared variables | resolved with rule R1 (§3.10.2) |
 | Burst-loss timer | resolved (§3.10.3) |
 | Scanner, recording, Call Log | resolved (§3.10.4) |
@@ -455,8 +455,65 @@ channel where possible).
 
 #### 3.10.8 Left unreviewed
 
-The `keys` stack question above; IRAM vocoder functions on the decrypt path (`00016890`, `000182BC`, …); `0300C5E4`/
+IRAM vocoder functions on the decrypt path (`00016890`, `000182BC`, …); `0300C5E4`/
 `0300C550` (timer helpers of the mode-4 path); the 30 IRAM SPI/GPIO helpers listed by the reach scan but not on a site.
+(The `keys` stack question is resolved in §3.10.9.)
+
+#### 3.10.9 The `keys` task stack path (work item S, 2026-10-17; code-verified frames, feasibility inferred)
+
+**Question (from §3.10.1 row T9):** the stock worst static path from task `keys` (`03012D2C`, prio 7, stack **192
+words = 768 B**, created by `03012EA0`) through the PTT handler `0305C334` → menu redraw `0303B6AC` → `sprintf`
+`030704C4` was estimated at ~1224 B — above the 768 B stack. Is it feasible?
+
+**How the PTT handler reaches the redraw (code-verified).** `keys` dispatches key/PTT events to `0305C334` through
+the handler table at `03013060` (a `jsri`, i.e. a *function-pointer* call — the stack scan does not cross it, which
+is why the scan is rooted at `0305C334`). Inside `0305C334`, the menu redraw `0303B6AC` is called at `0305C92C`
+**only in the branch where `FUN_03059D5C() == 0`** (a key/PTT event while a menu scene is active). `0303B6AC` then
+runs a common prologue (`bsr 0303B374` at `0303B6C6`) before dispatching the active scene through the pointer table
+`030B0D7C`.
+
+**Real frames (prologue `push` reg count ×4 + entry `subi sp`, from the stock image).** `03012D2C` +44 B,
+`0305C334` +52 B, `0303B6AC` +48 B, `0303B374` +60 B, `030704C4` (`sprintf`) +16 B, formatting core `03070EF0`
++244 B. A direct-call (`bsr`) stack scan rooted at `0305C334` (pointer calls not followed, ISR frames on the
+separate stack `4B7E0`) gives:
+
+- **With the floating-point `printf` subtree: ~1180 B.** The bottom ~456 B is `__dtostr` (`03071950` +68) →
+  `__muldf3` (`0306F4DC` +188) → `__pack_d` (`03070000` +200), reached from the formatting core only via the
+  float-conversion branch `03070EF0 → 03071674 → 03071950`, i.e. **only for a `%e`/`%f`/`%g` format**. The deepest
+  `sprintf` reached on the menu-redraw path, `03019800`, formats a **frequency** with the integer format
+  `"%03d.%05d"` (`param_6/100000`, `param_6%100000`) — no float — so the float subtree is **not on this path**.
+- **Without the float subtree: ~844 B** (still over 768 B). The excess now comes from two large menu-redraw local
+  frames, `03018E68` +160 B and `03031658` +148 B, chained with a data-flash record read
+  (`0305660C`→`0300F780`→`0300F364`→…). These are the per-scene redraw/record-read buffers.
+
+**Verdict (inferred):** the ~1180/844 B figure is a **loose static over-approximation, not a demonstrated
+dynamic path.** The scan maximises over `bsr` edges that are branch-exclusive and scene-selected: `0303B6AC`
+dispatches **one** scene per call, the deep frames (`03018E68`/`03031658`) and the float subtree are each reached
+only under specific scene state and format strings, and they are not shown to be simultaneously live on a single
+PTT-triggered redraw. The stock firmware is owner-confirmed working, and pressing PTT inside menus is routine; a
+routine ~76–450 B overflow of the `keys` stack would corrupt the adjacent task stack and reset the radio, which is
+not observed. So the path is **most likely infeasible / benign in stock**. It is **not provable infeasible
+statically** without enumerating every `0303B6AC` scene handler reachable under PTT and every reachable format
+string (beyond this pass), so it is recorded as a **latent, pre-existing stock margin risk, not caused by the TS/CC
+Match design.**
+
+**Stock stack checking (code-verified presence, port behaviour inferred).** The kernel is uC/OS-III with
+`OSTaskStkChk` and `OSTaskSwHook` built in and a per-task stack **limit of 12 words = 48 B**
+(`LIBRARY_SIGNATURES.md` §6). On the CK803S port there is no hardware stack-limit trap: `OSTaskStkChk` is a
+diagnostic (used by the stat task to report used/free, it does not trap), and the limit is only sampled at a
+context switch via `OSTaskSwHook`. A transient deep `sprintf` within one `keys` time-slice would therefore overrun
+and corrupt memory **before** any check ran. So stock firmware would **not reliably catch** this overflow if it
+did occur — which is another reason to keep the path from getting any deeper.
+
+**Consequence for T9 (`0305CB6C`).** Regardless of the verdict, the static bound already sits at or above the 768 B
+budget, so the TS/CC Match design must add **0 B** to this path: **T9 stays a frameless leaf** (no `push`, no stack
+locals, no calls). A single extra ≥48 B frame here could turn a just-within-budget redraw into an overflow.
+
+**Owner RX-only test (optional; does not transmit if set up as stated).** Set the active channel to **Rx Only**
+(so PTT cannot key TX — `CHANNEL_RECORD.md`, channel byte `+0x08` bit 3), then press PTT repeatedly while sitting in
+each menu scene that renders a frequency/scan/channel label (the deep-frame scenes). A stack overflow would show as
+a reset or corruption. This is RX-only *only* because the Rx Only channel blocks the transmitter; without that it
+would transmit and is an owner decision.
 
 ## 4. Code and RAM placement (constraints found)
 
