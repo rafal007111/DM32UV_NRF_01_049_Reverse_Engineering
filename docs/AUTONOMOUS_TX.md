@@ -40,3 +40,22 @@ with the threshold `030B84F0[3E9D4+0x5E]` (9 levels: 114, 134, 152, 159, 162, 16
   event, unless an alarm with `3FD4C+0x20` bit 4 is active.
 
 So VOX transmits whenever the microphone level exceeds the selected threshold while the radio is idle.
+
+## 2. Tick chain of the periodic features (2026-10-17, code-verified; period inferred)
+
+```
+IRAM periodic callback 0002CABC          — every 10th call: event bit 0 on 3FDB0     (GNSS_ANALYSIS.md §3)
+  → main task 03068E54 loop → 03013940    — one main-loop step per event bit 0
+      → 03054878 (at 03013E4C)            — every 100th step: event 0x20000 on 3FDB0
+          → task "ScanDisp" 0305490C      — created by 030545FC (priority 0x26, 0x600-byte stack buffer 3EB20)
+              → 03062D80 GPS/APRS beacon  (when 3FDE0 bit 2, 4009C bit 0, fix or 4009C bit 2)
+              → 03066824 roaming trigger  (when 40144 bit 0 or request 40142, zone count ≠ 0)
+              → 030654F8 Lone Worker      (when 0305DF8C() ≠ 0)
+              → also 030689F0, 03068CC0, 0301BCC4, 0301B924, 03035864, 0301B5F0, 0305463C, 0305489C (unreviewed)
+```
+
+So one ScanDisp tick = 1000 calls of `0002CABC`. The beacon interval (`× 30`), the roaming interval (`× 60`) and the
+Lone Worker response time (`× 60`) are counted in ScanDisp ticks, which fits a 1-second tick with intervals in units
+of 30 s / 1 min / 1 min **if** `0002CABC` runs every millisecond (period of the timer not established).
+The ScanDisp task skips the beacon and roaming steps while `33508+0x12` is non-zero, `3FDD9` bit 1 or `3E338` bit 2 is
+set, a menu scene (`320CB` 1…`0x3F`) is open, or `030649A8()` is neither 0 nor 1.

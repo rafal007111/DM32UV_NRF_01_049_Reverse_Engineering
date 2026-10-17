@@ -56,3 +56,5 @@ rows (`tools/dm32` discovers them as `SUB_…`/`(new)`):
 | `03011A80` | task `gps` loop: waits on `3FDB0` bits 20/25, copies UART lines into the NMEA ring (`030119BC`) | GNSS_ANALYSIS.md §1 |
 | `0002CCE4` | GNSS UART RX ISR (`0x14040000`): collects `$…\n` lines into `38B28`, posts `3FDB0` bit 20 | GNSS_ANALYSIS.md §1 |
 | `0002CABC` | periodic IRAM callback: GNSS no-data timeout, CPS-session watchdog restart (800 slow ticks) | GNSS_ANALYSIS.md §3 |
+| `03068E54` | main task: `0301B760`, `0305F674` (boot), `0305FBDC`, then loops `03013940` (one step per `3FDB0` bit 0) | AUTONOMOUS_TX.md §2 |
+| `0305490C` | task `ScanDisp` (created by `030545FC`): one tick per 100 main-loop steps; runs the GPS beacon, roaming trigger and Lone Worker timer | AUTONOMOUS_TX.md §2 |
