@@ -4,6 +4,7 @@
 #
 #   bash tools/setup_cloud.sh            # JDK 25, C-SKY binutils, Ghidra 12.1.4 + CSKY module
 #   bash tools/setup_cloud.sh --with-gcc # also upstream GCC 13.3 for csky-elfabiv2 (~25 min)
+#   bash tools/setup_cloud.sh --with-thead # also the pinned T-HEAD V3.10.29 B20210423 x86_64 toolchain
 #
 # Tools land in /opt. Sources come from the Ubuntu archive (binutils, gcc-13),
 # the official Ghidra GitHub release and the legacy CSKY module in analysis/ghidra_csky_module.
@@ -15,11 +16,17 @@ GHIDRA_VERSION=12.1.4
 GHIDRA_DATE=20260921
 GHIDRA_DIR=/opt/ghidra_${GHIDRA_VERSION}_PUBLIC
 GHIDRA_ZIP_SHA256=ddac49f903da9d5bac833e5cc79395098b9c33cfd3279be5f31bd00387d2d4db
+THEAD_DIR=/opt/thead-csky-v3.10.29-b20210423
+THEAD_TGZ=csky-elfabiv2-tools-x86_64-minilibc-20210423.tar.gz
+THEAD_URL=https://github.com/cjacker/wm_sdk_w80x/releases/download/init/$THEAD_TGZ
+THEAD_TGZ_SHA256=8b9a353c157e4d44001a21974254a21cc0f3c7ea2bf3c894f18a905509a7048f
 REPO=$(cd "$(dirname "$0")/.." && pwd)
 WITH_GCC=0
+WITH_THEAD=0
 for arg in "$@"; do
     case $arg in
         --with-gcc) WITH_GCC=1 ;;
+        --with-thead) WITH_THEAD=1 ;;
         *) echo "Unknown option: $arg" >&2; exit 2 ;;
     esac
 done
@@ -70,6 +77,18 @@ if [ "$WITH_GCC" = 1 ] && [ ! -x "$PREFIX/bin/csky-elfabiv2-gcc" ]; then
         make -j"$JOBS" all-target-libgcc >/dev/null && make install-target-libgcc >/dev/null)
 fi
 
+if [ "$WITH_THEAD" = 1 ] && [ ! -x "$THEAD_DIR/bin/csky-elfabiv2-gcc" ]; then
+    # Third-party mirror of the T-HEAD archive (the vendor site needs a login and is not reachable from the
+    # cloud proxy). Hash recorded on first download 2026-10-17; the build was accepted because it rebuilds
+    # the installed scanner module byte for byte (REPRODUCIBILITY.md).
+    log "T-HEAD C-SKY Tools V3.10.29 Minilibc abiv2 B20210423 (x86_64 Linux)"
+    curl -sS -L -o "$SRC/$THEAD_TGZ" "$THEAD_URL"
+    echo "$THEAD_TGZ_SHA256  $SRC/$THEAD_TGZ" | sha256sum -c -
+    mkdir -p "$THEAD_DIR"
+    tar -xzf "$SRC/$THEAD_TGZ" -C "$THEAD_DIR" --no-same-owner
+    rm -f "$SRC/$THEAD_TGZ"
+fi
+
 if [ ! -x "$GHIDRA_DIR/support/analyzeHeadless" ]; then
     log "Ghidra $GHIDRA_VERSION"
     ZIP="$SRC/ghidra_${GHIDRA_VERSION}_PUBLIC_${GHIDRA_DATE}.zip"
@@ -101,10 +120,15 @@ export JAVA_HOME=$JAVA_HOME
 export GHIDRA_INSTALL_DIR=$GHIDRA_DIR
 export PATH=$PREFIX/bin:$GHIDRA_DIR/support:\$JAVA_HOME/bin:\$PATH
 EOF
+if [ -x "$THEAD_DIR/bin/csky-elfabiv2-gcc" ]; then
+    # Not on PATH: its tool names clash with the upstream binutils/GCC above. Used by firmware/build_csky.sh.
+    echo "export DM32_CSKY_TOOLCHAIN=$THEAD_DIR" >> /opt/dm32-tools.env
+fi
 
 log "Summary"
 "$PREFIX/bin/csky-elfabiv2-objdump" --version | head -1
 if [ -x "$PREFIX/bin/csky-elfabiv2-gcc" ]; then "$PREFIX/bin/csky-elfabiv2-gcc" --version | head -1; fi
+if [ -x "$THEAD_DIR/bin/csky-elfabiv2-gcc" ]; then "$THEAD_DIR/bin/csky-elfabiv2-gcc" --version | head -1; fi
 "$JAVA_HOME/bin/java" -version 2>&1 | grep -v JAVA_TOOL_OPTIONS | head -1
 echo "Ghidra: $GHIDRA_DIR (language CSKY_V2:LE:32:default)"
 echo "Load with: source /opt/dm32-tools.env"

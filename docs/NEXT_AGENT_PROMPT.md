@@ -4,6 +4,8 @@ Updated 2026-10-15 after the fifth pass (all six work items of the previous prom
 TS Match off design closure, CC Match off completeness, settings storage, remaining internals, catalog hygiene).
 Copy everything below the line into a new agent session on this repository.
 
+For finishing the library names and tagging subsystems (no TS/CC Match work) use [NEXT_AGENT_PROMPT_LIBS_TAGS.md](NEXT_AGENT_PROMPT_LIBS_TAGS.md).
+
 ---
 
 Continue the work on the Baofeng DM32UV, firmware DM32.NRF.01.049 (C-SKY CK803S / HR-C7000, application VA
@@ -31,6 +33,9 @@ then continues static review of subsystems that are still unreviewed.
    CSKY v0.2 module + `analysis/ghidra_scripts/32b_data.fixed.sinc` with fix 3 for `zext`/`sext` — never analyse with
    the unfixed SLEIGH; upstream GCC 13.3 for compile/size checks). Then `source /opt/dm32-tools.env`.
    Upstream GCC is **not** the pinned T-HEAD GCC 6.3.0: its output is for size/link checks only and never byte-exact.
+   Since 2026-10-17 `--with-thead` installs the pinned T-HEAD V3.10.29 B20210423 x86_64 Linux build and
+   `firmware/build_csky.sh --scan` rebuilds the installed module byte for byte (`REPRODUCIBILITY.md`); use it for
+   target builds.
 4. Use `tools/dm32` (`fn`, `callers`, `acc`, `refs`, `decomp`, …; `docs/DM32RE_TOOLS.md`) and the `tools/static`
    helpers; working-set commands are in `RX_CALL_PATH_ANALYSIS.md` §0. Do not use `objdump -b binary` (it does not
    decode 32-bit C-SKY instructions); use `tools/static/objdump_image.sh`.
@@ -97,8 +102,8 @@ then continues static review of subsystems that are still unreviewed.
 3. **Target build and placement check.** Compile and link the new module with upstream GCC 13.3 and the
    `build_csky.ps1` flags (`-mcpu=ck803`, `-Werror`), report section sizes and confirm it fits after the Scan Zone
    module in `030E0E56..030E14EC` with alignment; disassemble the result with binutils 2.42 and check every cave's
-   prologue/epilogue and register use against its contract. Document that the pinned T-HEAD build is still needed
-   for byte-exact output and is the owner's step on Windows.
+   prologue/epilogue and register use against its contract. (2026-10-17: build with the pinned T-HEAD toolchain via
+   `firmware/build_csky.sh` instead; the owner's Windows build becomes a cross-check of the same bytes.)
 4. **In-memory guarded patch plan.** Add a new profile (e.g. `--profile match-options`) to
    `firmware/plan_integration.py`, or a separate planner in the same style, that: starts from stock, replays the
    installed-reference profile and checks `156a4872…`, verifies every new site's guard bytes, encodes each `bsr`

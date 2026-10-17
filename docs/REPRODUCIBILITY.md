@@ -37,8 +37,9 @@ on Linux in this session. These are host-model tests, not RF/hardware validation
 
 ## Rebuild and audit the standalone module
 
-The C-SKY build still requires Windows/PowerShell and the pinned T-HEAD toolchain
-in `docs/TOOLS.md`. It is not a portable target toolchain installation.
+The C-SKY build requires the pinned T-HEAD toolchain in `docs/TOOLS.md`, either
+the Windows/MinGW build with PowerShell or (since 2026-10-17) the x86_64 Linux build
+of the same release with `firmware/build_csky.sh`; see "Linux build" below.
 
 ```powershell
 ./firmware/build_csky.ps1 -ToolchainRoot 'C:\Tools\csky-elfabiv2-tools-mingw-minilibc-20210423' -IncludeScanCandidate
@@ -68,6 +69,38 @@ they select the **current** scanner sources and use the same `scan_candidate`
 directory. They cannot reproduce historical source versions. PickerEntryFix
 likewise aliases the current integration build. Compiler temporary files use a
 local ignored build directory and the prior TEMP/TMP values are restored.
+
+### Linux build (2026-10-17, code-verified)
+
+T-HEAD also released the pinned toolchain as an x86_64 Linux build:
+`csky-elfabiv2-tools-x86_64-minilibc-20210423.tar.gz` (80,451,419 bytes, SHA-256
+`8b9a353c157e4d44001a21974254a21cc0f3c7ea2bf3c894f18a905509a7048f`). The vendor
+download (occ.t-head.cn / xrvm.cn) needs a login and is blocked by the cloud proxy,
+so the archive came from a third-party GitHub mirror
+(`github.com/cjacker/wm_sdk_w80x`, release `init`). Its hash has not been compared
+with a vendor-published hash. It runs natively on Ubuntu 24.04 (dynamic glibc
+only: libc, libm, libdl); Wine is not needed and was not tried.
+`csky-elfabiv2-gcc --version` prints
+`csky-elfabiv2-gcc (T-HEAD C-SKY Tools V3.10.29 Minilibc abiv2 B20210423) 6.3.0`; objdump is 2.27.
+
+```bash
+bash tools/setup_cloud.sh --with-thead     # -> /opt/thead-csky-v3.10.29-b20210423, DM32_CSKY_TOOLCHAIN
+source /opt/dm32-tools.env
+firmware/build_csky.sh --scan              # same flags/module order as build_csky.ps1 -IncludeScanCandidate
+tail -c +257 analysis/inputs/DM32_NRF_049_20251017.bin > analysis/inputs/DM32.NRF.01.049.payload.bin
+python3 firmware/audit_staging.py firmware/build/scan_candidate
+python3 firmware/plan_integration.py firmware/build/scan_candidate --profile installed-reference
+```
+
+Result on 2026-10-17: `staging_module.raw` is 4458 bytes with SHA-256
+`b66ca0640d5aa8878ce0fc85aa3fceaac0133f86fa92a8b6fa4747d90fd4a7a1`, identical to
+the Windows build and to the installed image at `030DFCEC`; the audit passes (49
+functions, 62 menu pointers); the derived payload hash is `3711be95…` as in the
+manifest; the installed-reference replay applies 58 guarded changes in memory and
+reproduces `156a48723b20…`. The byte-exact match is the acceptance evidence for the
+mirrored archive. No image file was written and no radio was accessed. Future target
+builds (e.g. TS/CC Match) can therefore be made byte-exact in a cloud session; the
+owner's Windows build remains a useful independent cross-check.
 
 ## Exact endpoint replay versus historical installation
 
