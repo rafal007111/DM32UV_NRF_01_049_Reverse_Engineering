@@ -577,7 +577,7 @@ Flag writers of `3E0E8` (traced 2026-10-17, code-verified):
 
 | Bit | Set by | Condition | Cleared by |
 |---|---|---|---|
-| 0 and 1 | `0302C4FC` (from `0302C54C`) | displayed call is private (`3E0DC+0x14 == 1`), not the radio's own call (bit 4 clear), RX destination `3BA60 == 3F018` (own ID), **Missed Call Alert** on (`3E9D4+0x6F` bit 0 = block 4 `0x65` bit 0, `DATA_PATH_ANALYSIS.md` §9) and Monitor off (`3E341` bit 1) | bit 1 after logging kind 1 (`0302DF8A`); bit 0 when PTT answers that caller (`0305C2C4`) or by the call-display end in `0302DBEC` (`0302DD14`, which then shows the popup path) |
+| 0 and 1 | `0302C4FC` (from `0302C54C`) | displayed call is private (`3E0DC+0x14 == 1`), no PTT reply yet (bit 4 clear), RX destination `3BA60 == 3F018` (own ID), **Missed Call Alert** on (`3E9D4+0x6F` bit 0 = block 4 `0x65` bit 0, `DATA_PATH_ANALYSIS.md` §9) and Monitor off (`3E341` bit 1) | bit 1 after logging kind 1 (`0302DF8A`); bit 0 when PTT answers that caller (`0305C2C4`) or by the call-display end in `0302DBEC` (`0302DD14`, which then shows the popup path) |
 | 2 | `0305EA58` (psint handler) | `3E0DC+0x1C == 1` | after logging kind 2/3 (`0302DFDE`) |
 | 4 | `0305C1E0` (PTT target selection) | PTT during the display of a private call (`3E0DC+0x14 == 1`) to the displayed source (`3E0DC+0x10 == target`) | `0302DBEC` (`0302DC82`) at display end |
 
