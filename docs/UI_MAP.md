@@ -211,6 +211,12 @@ the firmware reads a key input for it and has short/long slots, but the owner do
 long-press entry is superseded: TK has a long-press slot like the others. The physical side (left/right, which
 side key is SK1) of the names comes from the owner report above; the index mapping is code-verified.
 
+Owner photo (2026-10-18, hardware-verified by the owner): the front panel has OK/menu, a D-pad (up, P1 = left,
+P2 = right, down), Home/back, digits 0–9, `*` (lock) and `#`; together with PTT and the side keys SK1/SK2 there is
+**no top key and no other key that could be TK** on the owner's DM32UV. Key index 9 (TK) is firmware support for a
+hardware variant; a TK assignment in CPS has no physical key on this radio (inferred from the photo plus the code).
+Which index is Home/back, `*` and `#` is not established (candidates: keys 2, 4, 10, 24, 25).
+
 Permission callbacks (`030727D4` → `18000804`, called by `030140E4`):
 
 | Index | Handler |
@@ -268,7 +274,8 @@ call display, LED, RF, SD card). The SD-card write `030674F0` is the only high r
 1. Names answered by the owner on 2026-10-18 (§6): SK1/SK2 = side keys, P1/P2 = D-pad left/right, each with short
    and long press; TK unknown to the owner. Key indices resolved statically the same day (§6 table: SK1 = 3,
    SK2 = 6, TK = 9, P1 = 8, P2 = 11; key 2 is a fixed key). Still open: whether a physical TK key exists on this
-   model (it is key index 9 in the firmware), and what key 2 is physically. No CPS write is needed for the mapping.
+   model: the owner's photo shows none (§6), so TK (key 9) has no physical key on this radio. Still open: the
+   indices of Home/back, `*` and `#` (candidates 2, 4, 10, 24, 25). No CPS write is needed for the mapping.
 2. Screen roles L12, L13, L15, L17 are inferred; open each screen and note its title.
 3. Keys 4, 10, 24, 25 post UI codes whose meaning is inferred.
 4. Left unreviewed: scene handler bodies (by rule), the image pointer table at `180009B8`, `030594D4`.
