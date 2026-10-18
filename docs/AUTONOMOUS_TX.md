@@ -8,7 +8,7 @@ changes none of them.
 
 | Trigger | What is sent | Gate / condition | Evidence |
 |---|---|---|---|
-| Confirmed data or text addressed to the own ID | link ACK/NACK/SACK, application reply | same CC; not on Rx Only channels for some types | `DATA_PATH_ANALYSIS.md` §6 |
+| Data or text addressed to the own ID (channel Radio ID) | link ACK/NACK/SACK (confirmed data), application reply (every individual text in the format selected by SMS Format, and the `0x44` format) | same CC and slot; **no Rx Only test on this path** (corrected 2026-10-18; Rx Only only blocks the CSBK ACKs) | `DATA_PATH_ANALYSIS.md` §6, `DATA_RX_PATH.md` §6 R1 |
 | Text `"WLT CMD "` + `'1'` | GPS position message to the requester | any matching sender (same CC) | `DATA_PATH_ANALYSIS.md` §6, `GNSS_ANALYSIS.md` |
 | CSBK Radio Check / Call Alert / Remote Monitor / Disable / Enable / `0x27` | ACK or NACK CSBK; Remote Monitor then **opens a transmission** to the requester | decode flags block 4 `0x65`; Rx Only channels: no ACK, but Disable/Enable/Call Alert still act | `DATA_PATH_ANALYSIS.md` §4.4, §8a |
 | `UU_V_Req` (private call request) | `UU_Ans_Rsp` CSBK | to own ID | `DATA_PATH_ANALYSIS.md` §4.5 |
@@ -24,8 +24,8 @@ changes none of them.
 
 Safe test practice (owner, revised 2026-10-17 from `TX_PATHS.md`): for RX-only tests use an Rx Only channel where
 possible (it blocks PTT, VOX, TBST, the beacon, roaming and the CSBK replies, but **not** the alarm, the analog
-decode acknowledgement or the DCDM CT_CSBK), disable Lone Worker, Auto Roaming, VOX, the GPS beacon interval and the emergency alarm in
-CPS, do not use DCDM ("Double Slot") channels (2026-10-18: they send CT_CSBKs on their own, Rx Only does not block them), set the analog signalling system of test channels to none (or disable decode responses), do not send texts,
+decode acknowledgement, the DCDM CT_CSBK or the replies to private texts — 2026-10-18, `DATA_RX_PATH.md` §6), disable Lone Worker, Auto Roaming, VOX, the GPS beacon interval and the emergency alarm in
+CPS, do not use DCDM ("Double Slot") channels (2026-10-18: they send CT_CSBKs on their own, Rx Only does not block them), set the analog signalling system of test channels to none (or disable decode responses), do not send private texts (group texts to a talkgroup in the RX group list cause no reply),
 CSBKs or DTMF/2-tone/5-tone codes to the radio from another radio unless a reply transmission is acceptable, and do
 not press `Alarm` or the TBST/Sub PTT side keys.
 

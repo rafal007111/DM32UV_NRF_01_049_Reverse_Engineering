@@ -1,5 +1,10 @@
 # Received DMR data paths — DM32.NRF.01.049
 
+> **2026-10-18:** the complete receive chain (every gate up to the Inbox), the accepted formats and encodings, the
+> SMS Format mapping, the settings that gate reception and the "why nothing arrives" checklist are in
+> **[DATA_RX_PATH.md](DATA_RX_PATH.md)**. Corrections made there: §2.1 own-source rule, §2.3 IPv4/`0x44` thresholds
+> (IPv4 needs total length ≥ 34 and no port is checked; `0x44` with length 0–2 gives no event).
+
 Static analysis, 2026-10-14. Ghidra 12.1.4 PUBLIC headless, legacy CSKY v0.2 module + `32b_data.fixed.sinc`,
 program `analysis/archives/DM32_NRF_049_correct_base.gzf` (SHA-256 `354f9324…`), stock image
 `stock_progmem_1MiB.bin` (SHA-256 `de7dbcbc…`). Full export: 2171 functions, 0 decompile failures. Pointer literals
@@ -63,7 +68,7 @@ Slot gates in `03028644` (`TS_ANALYSIS.md` §4) run before the table and are not
 - Other DPFs: destination filter `0302768C(6, …)` (returns true = drop):
   - group (octet 0 bit 7): accept only if destination is the channel contact `33CF4` or one of the 32 RX group
     list IDs `33CF8`, and source ≠ own ID. This does **not** depend on GCall Match or Monitor.
-  - individual: accept only if destination = own ID `33CEC` (`33CC8+0x24`); own-source echo only in mode 1.
+  - individual: accept only if destination = own ID `33CEC` (`33CC8+0x24`); own-source echo only in mode 1. *(Corrected 2026-10-18, `DATA_RX_PATH.md` §6: a self-addressed header from the own ID is dropped **only** in mode 1 and accepted otherwise.)*
 - On accept: resets the slot timeout `3BEB8`; in mode 0 copies the burst slot into `3BEAA`/`3BEAC` (the slot
   used for TX admission, `TS_ANALYSIS.md` §8); stores the raw header at `3C654+12·slot`; decodes DPF 0 UDT,
   1 Response, 2 Unconfirmed, 3 Confirmed, `0xD` Defined short data, `0xE` Raw/status short data into `3C278`
@@ -180,7 +185,7 @@ Waits on `38330` mask `0xA81F`.
   `+0xC`, text offset `+0x10` = 34, length `+0x14`) and payload to `3BAD8`; notifies the UI with
   `0300D028(2,1)` (new text, duplicate message IDs suppressed) or `(2,2)` (`0x2000`). Which of `1`/`0x8000`/`0x10`
   is treated as text depends on the SMS format `3E343` (codeplug block 4 `0x65` bits 2:1; menu items H-SMS,
-  M-SMS, D-SMS — mapping of values to labels inferred).
+  M-SMS, D-SMS — *2026-10-18, code-verified (`DATA_RX_PATH.md` §3): 0 = H-SMS shows `0x10`, 1 = M-SMS shows `1`, 2 = D-SMS shows `0x8000`; `0x2000` and `4` in every format; `4` is never shown*).
 - Individual (`G/I` = 0) messages, except `0x2000`: if A = 1, wait ≤ 120 ms then `03026518(0,1,…)` = link ACK
   (**transmits**). Then an application reply `03026A14` (IP/UDP reply, `33CEA` preamble CSBKs via
   `03029B3C`, header `03025DAC`, blocks `030260C4`) is **always transmitted**: once unconfirmed, or confirmed with
@@ -325,7 +330,7 @@ Only same-CC CSBKs reach this code (`03027B9C` CC gate, §2.4). Not hardware-ver
 
 - Should received foreign-CC group texts be stored in the Inbox (flash) or only shown?
 - Is the `"WLT CMD "` GPS poll wanted at all (it answers any matching sender with the radio's position)?
-- ~~CPS names of the decode bits in block 4 `0x65`~~ resolved 2026-10-14 from NeonPlug/qdmr: bit 7 Remote Monitor Decode, 6 Radio Disable Decode, 5 Radio Check Decode, 4 Radio Enable Decode, 3 Call Alert Decode, 2:1 Data Service, 0 Missed Call Alert. **Rx Only channels execute Disable/Enable/Call Alert regardless of these flags** (§8a). H/M/D-SMS mapping still open.
+- ~~CPS names of the decode bits in block 4 `0x65`~~ resolved 2026-10-14 from NeonPlug/qdmr: bit 7 Remote Monitor Decode, 6 Radio Disable Decode, 5 Radio Check Decode, 4 Radio Enable Decode, 3 Call Alert Decode, 2:1 Data Service, 0 Missed Call Alert. **Rx Only channels execute Disable/Enable/Call Alert regardless of these flags** (§8a). ~~H/M/D-SMS mapping still open~~ resolved 2026-10-18: 0 H-SMS, 1 M-SMS, 2/3 D-SMS (`DATA_RX_PATH.md` §3).
 - Owner hardware checks, all receive-side and without patches: whether CPS shows "Radio Disable decode" etc.;
   with stock firmware, send a radio check from a second radio on the same CC to confirm the ACK path; do **not**
   test Disable on the only radio (stun is persistent until an Enable is received).
