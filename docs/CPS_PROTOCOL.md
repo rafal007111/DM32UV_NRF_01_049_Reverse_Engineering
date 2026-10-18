@@ -215,6 +215,7 @@ table and evidence):
 | 6 | 64 × 16-byte list |
 | 7, 8, 9, 10 | Inbox / Outbox / Draft / quick-text messages (boot marker at `0xFFF`) |
 | 11 | digital contacts (count at 0, string `"Tx Contact %d/%d"`) |
+| `0x43`… | digital contact records, 24 bytes, 170 per area (`030332AC`, 2026-10-18) |
 | `0x0C`–`0x0E` | Call Log (Missed / Answered / Sent, 20 × 14-byte records) |
 | 15 | RX group lists |
 | 16 | per-channel privacy key list (key id + up to 32-byte key) |

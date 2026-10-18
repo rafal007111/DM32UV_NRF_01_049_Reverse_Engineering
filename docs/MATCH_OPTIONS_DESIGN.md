@@ -527,6 +527,8 @@ RX/TX were read (code-verified accesses). Result for this design: **no change** 
   channel-timing chain `03024120…03024794` with its timer callbacks (RX mode 4 only; it transmits CT_CSBKs on its own,
   `TX_PATHS.md` §9). The complete read-only list is now §3.10.1 + §3.8.3 + these two.
 - The menu insertion point (§2, Other Func entries 22/23) and its tables are mapped in [UI_MAP.md](UI_MAP.md).
+- §3.10.9 correction (P2): `03059D5C` validates a manually entered radio ID; its `== 0` branch in the PTT handler is the
+  invalid-ID case (error popup + redraw), so the deep redraw path under PTT is rarer than assumed. Verdict unchanged.
 
 ## 4. Code and RAM placement (constraints found)
 

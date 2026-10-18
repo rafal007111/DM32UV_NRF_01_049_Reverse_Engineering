@@ -200,3 +200,7 @@ decided tags **51 agree** (40 %).
 
 Cause: low-level helpers (flash, SPI, timers, crypto) inherit the tag of the task or neighbour that reaches them; the
 tagger knows no LCSFC, SPI, SD, DAC or privacy owner. The tagger was not changed.
+
+**P2** (second-tier hubs, 74 rows): 41 carried an `auto:` tag, 22 of them `shared (UI tasks)` (not counted). Of the 19
+decided tags **13 agree**: `Menu/input` 6/6 (text editor), `Audio/vocoder` 5/5, `GNSS/NMEA` 1/1, `Audio/tones` 1/1;
+disagreements `UI/call display` 0/3 (utility, storage, contacts), `Scanning` 0/2, `Settings` 0/1.

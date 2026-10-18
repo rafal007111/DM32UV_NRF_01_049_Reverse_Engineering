@@ -407,3 +407,41 @@ Recorded in [SUBSYSTEM_TAGS.md](SUBSYSTEM_TAGS.md) §8.
 
 The privacy bit-transform `0001496C` and its helpers (`low`), the vocoder frame processing `00016838`, the
 LCSFC status compare in `0002BC7C`, and the meaning of the CT_CSBK fields beyond the ETSI DCDM reading.
+
+## 9. Pass 3, work item P2 — second-tier hubs (5–9 direct callers, 2026-10-18)
+
+Work list: every `unreviewed` row with 5–9 `known_direct_callers` after P1 — **74 rows** (81 before P1; 7 were
+reviewed in P1). All 74 read like §2 (role, arguments, return, side effects, RAM/MMIO). Result: **13 high, 41 medium,
+20 low**; the low rows are mostly IRAM vocoder arithmetic and text-editor drawing whose exact formulas were not
+followed. Per-row text is in the catalog (`evidence` = "pass 3 P2").
+
+### 9.1 Groups
+
+| Group | Addresses | Notes |
+|---|---|---|
+| Storage | `0300F5B4` spare-sector allocator, `0300FB58` 128-byte-chunk copy-on-write area writer, `0002BA60` absolute data-flash write | the copy-on-write family of §2.2 is now complete (`0300F878`, `0300FA28`, `0300FB58`, `0300FDA4` all take a spare via `0300F5B4`) |
+| Channels / VFO | `03031658` working-copy builder, `030314B8` TX frequency (**record `0x1A` bits 1:0 = shift direction** none/+/−), `0002DF30` VFO copy, `0304A200` zone headers, `0304A39C`, `03064C9C`, `0300D810` analog-only band, `03055D3C`, `03057654` DMR ID list (area `0x67`), `030567EC` | |
+| Contacts / messages / Call Log | `03033274` count, **`030332AC` contact locator: 24-byte records, 170 per area, areas `0x43`+**, `030332E0` read, `0303331C` search, `030396A0` pick; `03052ED8`/`03054110` message boxes (areas 7–10); `03058984` Call Log clear | adds areas `0x43…` to the area map of [CPS_PROTOCOL.md](CPS_PROTOCOL.md) §4.2 |
+| Menu framework / editor | `0303B374` (the redraw prologue of §3.10.9), `0304735C` `show_message`, **`03059D5C` manual-ID validation**, number/text editor `0305953C`, `03059C90`, `0305A1D0`, `0305A464`, `0305A4FC`, list inits `0303972C`/`0303976C`, `03052E28` notice | |
+| Display | `03018854` small-font string drawer, home date/time `0301B5F0`, VFO frequency/icons `030306C8`/`030305B8`, indicator `0301A464`, `03060460` | |
+| RF / audio | `0002B50C`/`0002B514` RF reg 0x50 unmute/mute wrappers, `0300F124` RF reg 0x24 = 0, `0300DF08` analog RX restore, `03023028` audio gain, `030397E0` per-event alert tones, tone sample timer **`0301D858` start / `0301D878` stop** (hardware timer 2) | |
+| FM broadcast radio | bit-banged two-wire bus on **GPIO 25 (data) / 26 (clock)**, device address `0x20` (`03065C48`, `03065D0C`, `03065D60`; RDA5807-class receiver inferred), pause/resume `03065FF0`/`03065FD8` | |
+| Misc | RTC date conversion `0301C238`, recording sector lookup/count `0300F52C`/`03010CF8`, hardware timer disable `0002CBEC`, tick wait `0305FDEC`, LED GPIO 33 `030611F4`, call hang clear `0301E850`, `03021598`, `03055A1C`, delays and stubs, `__floatunsidf` `0306FC60`, IRAM vocoder helpers `00018C9C`…`0001ADA0` | |
+
+### 9.2 API pairs (call sites checked with `Xrefs.callers_of`)
+
+| Pair | Result |
+|---|---|
+| tone timer `0301D858` start / `0301D878` stop | every one of the 8 functions that stops the timer also starts it; `03022190` only starts it (its stop is in the tone task `03022410`) — pairs match |
+| RF reg 0x50 unmute `0002B50C` / mute `0002B514` | split by role: unmute at TX/tone start (`0305BE64`, `03061648`, `03065114`, PCTESTM, sweep, Remote Monitor), mute at TX/tone end (`030601CC`, `03068A88`, `03068B4C`, `03068C1C`, `03068D04`, `0305C1E0`); only the DTMF keypad `03059904` does both — consistent with a start/end pair |
+| FM pause `03065FF0` / change `03065FD8` | no common caller: pause at call/TX starts, the other at call/scene ends — consistent pair (direction of `03065FD8` low) |
+| data-flash mutex `39468` | `0300FB58`, `03010CF8` pend and post it on every path read (like §2.1) |
+
+### 9.3 What P2 changes elsewhere
+
+- **`MATCH_OPTIONS_DESIGN.md` §3.10.9 (keys stack):** the branch "`03059D5C() == 0`" in the PTT handler is the
+  **invalid manual-ID** case (error popup + redraw), not "a PTT event while a menu scene is active". The deep redraw
+  path is therefore rarer than assumed; the verdict (most likely benign, T9 must stay a frameless leaf) is unchanged.
+- **`CHANNEL_RECORD.md`:** byte `0x1A` bits 1:0 = repeater shift direction (0 none, 1 +, 2 −; `030314B8`).
+- **`CPS_PROTOCOL.md` §4.2:** contact records live in areas `0x43…` (170 × 24 bytes each), area 11 holds the header.
+- No P2 function touches the TS/CC Match sites or the TX admit inputs.
