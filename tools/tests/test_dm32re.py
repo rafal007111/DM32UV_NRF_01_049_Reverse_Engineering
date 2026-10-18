@@ -325,6 +325,152 @@ class LibSigStock(unittest.TestCase):
         self.assertNotIn(0x0306F10C, self.rows)  # relocation-only tables never count as near
 
 
+class MatchPure(unittest.TestCase):
+    """No toolchain needed: the oracle's comparison on hand-made objects (docs/MATCHING_PILOT.md, M2)."""
+
+    def ref(self, code, base=0, relocs=()):
+        from dm32re import libsig
+        mask = bytearray(b"\x01" * len(code))
+        for r in relocs:
+            mask[r.off:r.off + 4] = b"\x00\x00\x00\x00"
+        return libsig.RefFn(["f"], "test", code, mask, list(relocs), start=base)
+
+    def test_pool_alignment_is_not_a_difference(self):
+        from dm32re import match
+        word = b"\x78\x56\x34\x12"
+        ref = self.ref(b"\x61\x10" + b"\x3c\x78" + word)  # lrw16 r3 -> pool at 4; rts
+        fw = match.BufferView({0x03010002: b"\x62\x10" + b"\x3c\x78" + b"\x03\x6c" + word})  # pool at +8
+        self.assertEqual(match.compare(ref, fw, 0x03010002).verdict, match.PASS)
+        fw = match.BufferView({0x03010002: b"\x62\x10" + b"\x3c\x78" + b"\x03\x6c" + b"\x00\x00\x00\x00"})
+        self.assertEqual(match.compare(ref, fw, 0x03010002).verdict, match.FAIL)  # pool word differs
+
+    def test_encoding_only(self):
+        from dm32re import match
+        ref = self.ref(b"\x04\x60" + b"\x3c\x78")  # 6004 addu r0, r1; rts
+        fw = match.BufferView({0x100: b"\x04\x58" + b"\x3c\x78"})  # 5804 addu r0, r0, r1 (vendor form)
+        res = match.compare(ref, fw, 0x100)
+        self.assertEqual((res.verdict, res.enc), (match.PASS_ENC, 1))
+        fw = match.BufferView({0x100: b"\x08\x60" + b"\x3c\x78"})  # 6008 addu r0, r2
+        self.assertEqual(match.compare(ref, fw, 0x100).verdict, match.FAIL)
+
+    def test_relocated_call_and_data(self):
+        import struct
+        from dm32re import libsig, match
+        callee = libsig.Symbol("FUN_03020000", 0, 0, 0, 1, 0)
+        data = libsig.Symbol("g_state", 0, 0, 1, 1, 0)
+        # bsr32 FUN_03020000 (offset field zero in the object); lrw16 r3 -> pool at 8; rts; pool word
+        code = b"\x00\xe0\x00\x00" + b"\x61\x10" + b"\x3c\x78" + b"\x00\x00\x00\x00"
+        ref = self.ref(code, relocs=[libsig.Reloc(0, libsig.R_PCREL26, callee, 0),
+                                     libsig.Reloc(8, libsig.R_ADDR32, data, 4)])
+        imm = ((0x03020000 - 0x03010000) >> 1) & 0x3FFFFFF
+        bsr = struct.pack("<HH", (0xE0000000 | imm) >> 16, imm & 0xFFFF)
+        good = bsr + b"\x61\x10\x3c\x78" + struct.pack("<I", 0x0003BEAC)
+        fw = match.BufferView({0x03010000: good})
+        self.assertEqual(match.compare(ref, fw, 0x03010000).verdict, match.UNRESOLVED)  # g_state unknown
+        self.assertEqual(match.compare(ref, fw, 0x03010000, {"g_state": 0x3BEA8}).verdict, match.PASS)
+        self.assertEqual(match.compare(ref, fw, 0x03010000, {"g_state": 0x3BEB0}).verdict, match.FAIL)
+        imm2 = ((0x03020010 - 0x03010000) >> 1) & 0x3FFFFFF
+        bad = struct.pack("<HH", (0xE0000000 | imm2) >> 16, imm2 & 0xFFFF) + good[4:]
+        fw = match.BufferView({0x03010000: bad})
+        self.assertEqual(match.compare(ref, fw, 0x03010000, {"g_state": 0x3BEA8}).verdict, match.FAIL)
+
+    def test_firmware_longer_than_compiled(self):
+        from dm32re import match
+        ref = self.ref(b"\x3c\x78")  # rts
+        fw = match.BufferView({0x100: b"\x3c\x78\x04\x60\x3c\x78"}, sizes={0x100: 6})
+        self.assertEqual(match.compare(ref, fw, 0x100).verdict, match.FAIL)
+        fw = match.BufferView({0x100: b"\x3c\x78\x04\x60\x3c\x78"}, sizes={0x100: 2})
+        self.assertEqual(match.compare(ref, fw, 0x100).verdict, match.PASS)
+
+
+@unittest.skipUnless(HAVE_THEAD, "pinned T-HEAD toolchain missing (tools/setup_cloud.sh --with-thead)")
+class MatchCompiled(unittest.TestCase):
+    """A tiny function compiled by the pinned toolchain against a synthetic firmware buffer."""
+
+    SRC = ("extern void FUN_03020000(int);\n"
+           "extern volatile unsigned DAT_0003bea8;\n"
+           "int f_03010000(int a, int b) { FUN_03020000(a + b); return DAT_0003bea8 + 1; }\n")
+
+    @classmethod
+    def setUpClass(cls):
+        import tempfile
+        from dm32re import match
+        cls.tmp = tempfile.TemporaryDirectory()
+        src = Path(cls.tmp.name) / "f.c"
+        src.write_text(cls.SRC)
+        cls.obj = match.compile_c(src, THEAD, "-mcpu=ck803 -Os", Path(cls.tmp.name))
+        cls.ref = match.pick(cls.obj, None, 0x03010000)
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.tmp.cleanup()
+
+    def firmware(self, at=0x03010000):
+        """The compiled bytes with their relocations applied for a function placed at `at`."""
+        import struct
+        from dm32re import libsig, match
+        code = bytearray(self.ref.code)
+        for r in self.ref.relocs:
+            tgt = match.symbol_address(r, {})
+            if r.type == libsig.R_PCREL26:
+                imm = ((tgt - (at + r.off)) >> 1) & 0x3FFFFFF
+                hi, lo = struct.unpack_from("<HH", code, r.off)
+                w = (hi << 16 | lo) & ~0x3FFFFFF | imm
+                struct.pack_into("<HH", code, r.off, w >> 16, w & 0xFFFF)
+            else:
+                struct.pack_into("<I", code, r.off, tgt)
+        return bytes(code)
+
+    def test_pass(self):
+        from dm32re import match
+        self.assertEqual(self.ref.names[0], "f_03010000")
+        self.assertEqual({r.sym.name for r in self.ref.relocs}, {"FUN_03020000", "DAT_0003bea8"})
+        fw = match.BufferView({0x03010000: self.firmware()}, sizes={0x03010000: len(self.ref.code)})
+        res = match.compare(self.ref, fw, 0x03010000)
+        self.assertEqual((res.verdict, res.differing), (match.PASS, 0))
+
+    def test_fail(self):
+        from dm32re import match
+        code = bytearray(self.firmware())
+        code[0] ^= 0x01  # change the first instruction
+        res = match.compare(self.ref, match.BufferView({0x03010000: bytes(code)}), 0x03010000)
+        self.assertEqual(res.verdict, match.FAIL)
+        self.assertGreaterEqual(res.differing, 1)
+
+    def test_wrong_callee_fails(self):
+        from dm32re import match
+        fw = match.BufferView({0x03010000: self.firmware()})
+        res = match.compare(self.ref, fw, 0x03010000, {"FUN_03020000": 0x03020004})
+        self.assertEqual(res.verdict, match.FAIL)
+
+
+@unittest.skipUnless(HAVE_IMAGE and HAVE_THEAD, "needs stock image and the pinned T-HEAD toolchain")
+class MatchStock(unittest.TestCase):
+    """Pilot results on the stock image (docs/MATCHING_PILOT.md 3), with the committed pilot C files."""
+
+    def verdict(self, addr, name, flags):
+        from dm32re import match
+        src = image.REPO / "analysis" / "matching" / name
+        func, syms = match.source_hints(src.read_text())
+        ref = match.pick(match.compile_c(src, THEAD, flags), func, addr)
+        return match.compare(ref, match.FwView("stock"), addr, syms)
+
+    def test_shared_pool_pass(self):  # the vendor pool word for 0300C3AC sits behind later functions (0300C408)
+        res = self.verdict(0x0300C3AC, "0300C3AC_rf_carrier_get.c", "-mcpu=ck803 -Os")
+        self.assertEqual(res.verdict, "PASS")
+        self.assertEqual([r.fw.off for r in res.rows if r.fw.kind == "D"], [0x5C])
+
+    def test_best_flag_set(self):
+        best = "-mcpu=ck803 -O2 -fno-reorder-blocks -fno-crossjumping -fno-schedule-insns2"
+        for addr, name in [(0x0002C38C, "0002C38C_dac_write.c"), (0x03023CCC, "03023CCC_popcount8.c"),
+                           (0x03029318, "03029318_slot_flags_clear.c")]:
+            self.assertEqual(self.verdict(addr, name, best).verdict, "PASS", name)
+
+    def test_entry_extension_is_a_difference(self):  # vendor zextb r0, r0 on entry, GCC 6.3 trusts the caller
+        res = self.verdict(0x0002C1D0, "0002C1D0_lcd_cmd.c", "-mcpu=ck803 -Os")
+        self.assertEqual((res.verdict, res.differing), ("FAIL", 1))
+
+
 @unittest.skipUnless(shutil.which("analyzeHeadless") or os.path.exists("/opt/ghidra_12.1.4_PUBLIC"),
                      "Ghidra missing")
 class GhidraDecompile(unittest.TestCase):
