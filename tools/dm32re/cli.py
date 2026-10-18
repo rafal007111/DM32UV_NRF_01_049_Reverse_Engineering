@@ -228,6 +228,15 @@ def main(argv=None):
     s.add_argument("--no-near", action="store_true", help="skip the near (similarity) pass")
     s.add_argument("--norm", action="store_true",
                    help="also compare the library block after normalising vendor encodings (slower)")
+    s = sub.add_parser("match", help="compile a C function and compare it with the firmware (see match.py)")
+    s.add_argument("addr", type=addr)
+    s.add_argument("file", help="C source with the function")
+    s.add_argument("--toolchain", default=os.environ.get("DM32_CSKY_TOOLCHAIN", ""),
+                   help="candidate toolchain root (default: $DM32_CSKY_TOOLCHAIN)")
+    s.add_argument("--cflags", default="-mcpu=ck803 -Os", help='compiler flags (default "-mcpu=ck803 -Os")')
+    s.add_argument("--func", help="function name in the object (default: name ending in the address, or the only one)")
+    s.add_argument("--sym", action="append", metavar="NAME=ADDR", help="firmware address of an external symbol")
+    s.add_argument("--diff-only", action="store_true", help="print only rows that are not equal")
     s = sub.add_parser("tag", help="subsystem tags for unreviewed functions (see tag.py, docs/SUBSYSTEM_TAGS.md)")
     s.add_argument("addr", type=addr, nargs="?", help="show the evidence for one function")
     s.add_argument("--csv", help="write all tags to this CSV")
@@ -239,6 +248,11 @@ def main(argv=None):
         if not a.toolchain:
             p.error("libsig needs --toolchain or DM32_CSKY_TOOLCHAIN")
         return libsig.run(a)
+    if a.cmd == "match":
+        from . import match
+        if not a.toolchain:
+            p.error("match needs --toolchain or DM32_CSKY_TOOLCHAIN")
+        return match.run(a)
     if a.cmd == "decomp":
         cmd_decomp(None, a)
         return 0
