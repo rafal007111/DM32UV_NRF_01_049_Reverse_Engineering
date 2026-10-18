@@ -293,3 +293,5 @@ CPS word, no image written. Details: [HUB_FUNCTIONS.md](HUB_FUNCTIONS.md) §8–
 - TS/CC Match design unchanged; new read-only subjects `030237AC` (sync type of the last burst) and the DCDM chain.
 - Catalog: 488 high, 407 medium, 232 low, 1044 unreviewed (was 377 / 280 / 46 / 1468).
 
+
+2026-10-18 owner report (hardware-verified by the owner): SK1/SK2 are the programmable side keys, P1/P2 the programmable left/right keys of the D-pad (up/down navigate); each has a short- and a long-press function. TK is unknown to the owner. Key-index mapping still open. Details: [UI_MAP.md](UI_MAP.md) §6, §10.

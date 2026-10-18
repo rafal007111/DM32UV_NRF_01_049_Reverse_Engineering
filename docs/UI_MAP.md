@@ -185,6 +185,13 @@ entry `3931D`. Long press runs the long assignment from the timer callback (infe
 (SK1, SK2, TK, P1, P2) with short/long entries; six key indices (2, 3, 6, 8, 9, 11) use the programmable path, key 9
 without a long-press entry. Which physical key is which name is **inferred only** — owner observation needed.
 
+Owner report (2026-10-18, hardware-verified by the owner, names only): **SK1** and **SK2** are the programmable
+side keys; **P1** and **P2** are the programmable left and right keys of the main D-pad, whose up and down
+positions are the navigation keys (consistent with keys 12/13 = UI codes 18/19, still inferred). Each of these four
+keys can be assigned a short-press and a separate long-press function in CPS. The owner does not know what **TK**
+is. Not yet known: which key index (2, 3, 6, 8, 9, 11) belongs to which name. Since all four named keys have a
+long-press function, key 9 (no long-press entry used) is probably not SK1/SK2/P1/P2 (inferred).
+
 Permission callbacks (`030727D4` → `18000804`, called by `030140E4`):
 
 | Index | Handler |
@@ -239,8 +246,11 @@ call display, LED, RF, SD card). The SD-card write `030674F0` is the only high r
 
 ## 10. Open questions and owner observations (screen-only, no TX)
 
-1. Which physical key is SK1, SK2, TK, P1, P2 (key indices 2, 3, 6, 8, 9, 11)? Assign distinct harmless functions
-   (e.g. Backlight-type or Monitor off) in CPS and press each key on a dummy load, screen only.
+1. Names answered by the owner on 2026-10-18 (§6): SK1/SK2 = side keys, P1/P2 = D-pad left/right, each with short
+   and long press; TK unknown to the owner. Still open: the key index of each name, and what TK is (possibly a
+   key not present on this model, or a top key; not established). To map indices, assign distinct functions that
+   do not transmit and only change the screen (e.g. a backlight or display function; not Monitor, Alarm, TBST or
+   Sub PTT) in CPS and note which key does what. This needs a CPS write, so it is the owner's decision.
 2. Screen roles L12, L13, L15, L17 are inferred; open each screen and note its title.
 3. Keys 4, 10, 24, 25 post UI codes whose meaning is inferred.
 4. Left unreviewed: scene handler bodies (by rule), the image pointer table at `180009B8`, `030594D4`.
