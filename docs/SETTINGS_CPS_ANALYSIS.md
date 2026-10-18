@@ -82,7 +82,7 @@ P1 Short, P1 Long, P2 Short, P2 Long, Long Press Time) → settings `0x47`, `0x4
 | 15 | TBST Sel | block 4 `0xA5` bits 5:4, `3EA41` bits 4:3 | |
 | 16 | Tail | block 4 `0xA5` bits 1:0 from `3E22C` bits 3:2 | |
 | 17 | Ana SQL Level | `0300DE8C(v)` | |
-| 18 | SMS Format | `0x45` → `0x65` bits 2:1, `3E343` | |
+| 18 | SMS Format | `0x45` → `0x65` bits 2:1, `3E343` | list `030BC8A8`: index **0 H-SMS, 1 M-SMS, 2 D-SMS** (boot forces 3 → 2); selects the RX and TX text format (`DATA_RX_PATH.md` §3, 2026-10-18) |
 | 19 | **PCall Match** | `9` → `0x60` bit 0, `3EA06` bit 5 → `3BA6D` bit 1 | |
 | 20 | **GCall Match** | `10` → `0x60` bit 1, `3EA06` bit 6 → `3BA6D` bit 2 | |
 | 21 | MOTO | block 4 `0x85` bit 4, `3EA05` bit 6 | **no reader found**; boot load `0304A45C` reads `0x85` bits 0–3 only |
@@ -98,7 +98,7 @@ of this list plus two new cases after `030501DE` (inferred design; the case tabl
 |---|---|---|
 | `0x60` | `0304B010` (boot), `0304B158` settings 9/10 (read-modify-write) | bits 0/1 PCall/GCall Match; **bits 2–7: no reader in firmware** |
 | `0x61`–`0x64` | `0304B010` | `RX_CALL_PATH_ANALYSIS.md` §8.1 |
-| `0x65` | `0305D8C0`, `0304B158` (`0x45`) | bit 3 Call Alert decode, bit 7 Remote Monitor, bit 6 Disable, bit 5 Radio Check, bit 4 Enable (`030214F0(n, on)`), bits 2:1 SMS format `3E343`, bit 0 → `3EA43` bit 0 |
+| `0x65` | `0305D8C0`, `0304B158` (`0x45`) | bit 3 Call Alert decode, bit 7 Remote Monitor, bit 6 Disable, bit 5 Radio Check, bit 4 Enable (`030214F0(n, on)`), bits 2:1 SMS format `3E343` (0 H-SMS, 1 M-SMS, 2/3 D-SMS; `DATA_RX_PATH.md` §3), bit 0 → `3EA43` bit 0 |
 | `0x66` | `0305D8C0` | `3FD78`; `3FD78 = (v+1)·10` (0..11), else 10; 0 → 120 (remote-monitor duration in s, inferred) |
 | `0x67` | `0304A45C`, `030610EC` | unreviewed |
 

@@ -38,6 +38,7 @@ The current Ghidra export has 2,171 function boundaries: 1,958 marked ok and 213
 | Menu framework and helpers (hub pass H1) | 03035E68 (scene set), 03036BB0 (back), 0304A1E8/03049498 (item lists), 030393B8/03039420 (list cursor), 0304C434 (setting getter), 030130AC (key injection), 03030560/03030370/0305660C/0305655C (channel/zone), 03059C14… (text editor) | 76 hubs with ≥ 10 callers named (46 high, 18 medium, 12 low); see docs/HUB_FUNCTIONS.md §1–§2. |
 | Display driver and drawing layer (hub pass H2) | 0002C1D0/0002C1DC/0002C1E8 (LCD bus 12000000), 03017CE4 (ST7789-class init), 03017BD0/030178A4 (window, 2C), 03017BE8 (fill), 030179E8/03017C54 (line/rect), 0303900C/03017954/03018D78 (blit, bitmaps), 03018930/03018AF4 (text), 030186E4/03018644/03010E24/03010E48 (12×24 ASCII, 24×24 GB2312 from SPI data flash), 030193CC/03019BD4/0303A4F4/03018C70 (status bar, soft keys, popups, menu rows) | 240×320 RGB565, direct write, no frame buffer; language = 3EA04 bit 6 selects the string only. Code-verified; controller model inferred; see docs/HUB_FUNCTIONS.md §3. |
 | Recording/privacy/CPS words | 0302124C (task record, uncatalogued), 03010B40, 03061A44, 00014698, 000147AC, 0001CFAC, 0001D4B8, 00015880, 000160C0, 0302A9A8, 0302AA58, 030562C4 | Recording layout, RC4/AES structure, RTCITEM/PCTESTM, RX group list loader. See docs/RX_CALL_PATH_ANALYSIS.md §15. |
+| Data/text receive path (2026-10-18) | 03024E7C, 0302768C, 03025480, 0302530C, 0301FF9C (rxmsg, uncatalogued), 03020664…030206A8, 0305EF88, 03054564, 0302DF18 (CallDisp, uncatalogued), 0305D764, 0301104C, 03053D74, 0303989C, 0305D8C0, 0305D39C, 0301E804/0301E824/0301E82C/0301EBB0, 03057654 | Every gate from the data burst to the Inbox and the "Msg Received" popup; classifier formats; SMS Format block 4 0x65 bits 2:1 = 0 H-SMS / 1 M-SMS / 2 D-SMS selects which format is shown; UTF-16LE/BE to GB2312; private texts answered without Rx Only test. See docs/DATA_RX_PATH.md. |
 
 Supporting Ghidra outputs are in analysis/reference. Targeted menu work is in analysis/ghidra_scripts and the earlier workspace's integration_review/menu_flow artifacts. The current source modules are in firmware/source.
 
@@ -54,7 +55,7 @@ rows (`tools/dm32` discovers them as `SUB_…`/`(new)`):
 |---|---|---|
 | `030206D0` | task `rxvoice` (event group `3658C`, mask `0x40006807`) | RX_CALL_PATH_ANALYSIS.md §1.2; MATCH_OPTIONS_DESIGN.md §3.8 |
 | `030209E4` | task `rxcsbk` (mask `0x7540000`) | DATA_PATH_ANALYSIS.md; CC_MATCH_DESIGN.md §5 |
-| `0301FF9C` | task `rxmsg` | DATA_PATH_ANALYSIS.md |
+| `0301FF9C` | task `rxmsg` (waits on `38330` mask `0xA81F`; SMS Format gate, replies) | DATA_PATH_ANALYSIS.md; DATA_RX_PATH.md §1 (G16–G19) |
 | `0301FDD8` | task `txmsg` | RX_CALL_PATH_ANALYSIS.md §13 |
 | `0305F234` | task `psint` (UI status dispatch) | RX_CALL_PATH_ANALYSIS.md §1.3 |
 | `0302B340` | task `usb` (CPS handshake words) | SETTINGS_CPS_ANALYSIS.md §3.1 |

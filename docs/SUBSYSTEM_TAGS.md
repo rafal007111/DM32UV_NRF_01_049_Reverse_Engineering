@@ -211,3 +211,9 @@ disagreements `UI/call display` 0/3 (utility, storage, contacts), `Scanning` 0/2
 keys/side keys or key input (6) and recording (1), `Recording/privacy` → privacy (3), `Scanning` → side keys (2) and a
 scene (1), `Menu/input` → framework/scene/editor (3), `GNSS/NMEA` and `Periodic (IRAM callback)` → unreached/IRQ (1
 each). 129 rows had no tag (no caller → no evidence for the tagger). The tagger was not changed.
+
+## 9. Tag check from the data RX pass (2026-10-18, `DATA_RX_PATH.md`)
+
+12 rows reviewed from unreviewed: 5 carried `auto: UI/status` (rxmsg descriptor getters/copies `03020664…030206A8`,
+reviewed as `UI/messages` — adjacent, counted as disagreement: 0/5), 5 carried `auto: shared (UI tasks)` (not counted;
+reviewed as `UI/messages` ×3, `Digital TX/DMR data` ×2), 2 had no tag (`Digital TX/DMR data`). The tagger was not changed.

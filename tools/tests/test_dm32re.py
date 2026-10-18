@@ -148,6 +148,33 @@ class Analysis(unittest.TestCase):
         self.assertEqual(tags, {0x47534D54, 0x47414C46, 0x47495354, 0x414D4553, 0x53455254, 0x4B434954,
                                 0x53555354, 0x55455551})  # OS_IntQRePost object types
 
+    def ins_at(self, func, addr):
+        return next(i for i in self.d.code(func) if i.addr == addr)
+
+    def test_data_dst_filter(self):  # DATA_RX_PATH.md 1 (G9), code-verified
+        # individual data header: destination compared with the own ID 33CEC = 33CC8 + 0x24
+        lrw = self.ins_at(0x0302768C, 0x0302782C)
+        self.assertEqual(self.d.literal(lrw), 0x33CC8)
+        self.assertEqual(self.ins_at(0x0302768C, 0x0302782E).ops.replace(" ", ""), "r3,(r3,0x24)")
+        # group data header: 33 words 33CF4..33D77 (RX group list + TX contact), bounds 33CC8 + 44 .. + 176
+        self.assertEqual(self.ins_at(0x0302768C, 0x03027848).ops.replace(" ", ""), "r3,r1,44")
+        self.assertEqual(self.ins_at(0x0302768C, 0x0302784C).ops.replace(" ", ""), "r1,176")
+
+    def test_data_classifier_formats(self):  # DATA_RX_PATH.md 2, code-verified
+        imm = [i.ops.replace(" ", "") for i in self.d.code(0x0302530C) if i.mnem == "cmpnei"]
+        # 0x44 format, IPv4 (0x45), IPv4 ACK length 33, DPF 0xD / 0xE / 1
+        for want in ("r3,68", "r3,69", "r2,33", "r3,13", "r3,14", "r3,1"):
+            self.assertIn(want, imm)
+
+    def test_sms_format_setting(self):  # DATA_RX_PATH.md 3, code-verified
+        # boot: 3E343 = block 4 0x65 bits 2:1
+        self.assertEqual(self.ins_at(0x0305D8C0, 0x0305DA2C).ops.replace(" ", ""), "r3,r3,2,1")
+        stores = {a.site for a in self.x.accesses_in(0x3E343, 0x3E344) if a.kind == "st"}
+        self.assertEqual(stores, {0x0304B78A, 0x0304B796, 0x0304B79E, 0x0305DA32, 0x0305DA3E})
+        # M-SMS (1) text is copied from payload + 34 (3C2F4), the other formats from 3C2D2
+        lits = [self.d.literal(i) for i in self.d.code(0x03020684) if i.mnem == "lrw"]
+        self.assertEqual(lits, [0x3E334, 0x3C2F4, 0x3C2D2])
+
     def test_similarity(self):
         from dm32re import similar
         ix = similar.Index(self.x)

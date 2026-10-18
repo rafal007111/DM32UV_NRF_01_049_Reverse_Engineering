@@ -53,7 +53,7 @@ byte accesses only, found by `tools/dm32` constant tracking) and example functio
 | `0x1D` | `+0x0D` | colorcode 3:0 | `ins 3,0` (`030572B8` setting `'3'`), `&0x0F` | ✓ (TS_ANALYSIS §1) |
 | `0x1D` | `+0x0D` | timeslot 4 (0 = TS1) | `ins 4,4` (`03056FFC` setting 5), `&0x10`, home screen T1/T2 | ✓ |
 | `0x1D` | `+0x0D` | **dcdm** 5 | `ins 5,5` (`030571CC` setting `'F'`), selects RX mode 4 in `03056330` | ✓ — names the bit: **DCDM / Double Slot** (was "probably Double Slot") |
-| `0x1D` | `+0x0D` | dataACK 6, privateCallACK 7 | no byte-level access found | not checked |
+| `0x1D` | `+0x0D` | dataACK 6, privateCallACK 7 | no byte-level access found; 2026-10-18 re-check of every tracked `3E205` access: no masked read of bits 6/7 (the other reads assemble the whole byte for a write-back), received private texts are always acknowledged and answered (`DATA_RX_PATH.md` §5) | fw ignores (inferred) |
 | `0x1E` | `+0x0E` | keyIndex u8 (0 = none) | whole-word reads | not checked |
 | `0x1F` | `+0x0F` | encryptionEnable 6 | `ins 6,6` (`0305D0A0`), toggle at `03015E08`, `&0x40` | ✓ |
 | `0x1F` | `+0x0F` | groupListIndex 5:0 | `ins 5,0` (`030573A0`), `&0x3F` | ✓ |
@@ -63,7 +63,7 @@ byte accesses only, found by `tools/dm32` constant tracking) and example functio
 | `0x25` | `+0x15` | vox 4 | `ins 4,4` (`0301BDB4`) | ✓ |
 | `0x26` | `+0x16` | showPTTId 7, optSigEnable 4, optSigType 0 (offsets declared, not implemented in qdmr) | `ins 6,4` / `zext 6,4` (`03031060`), `&0x0E` / `zext 3,1` | ≈ fw uses 6:4 and 3:1 |
 | `0x29` | `+0x19` | pttIdEnable 2 (declared, not implemented) | `0304B158` setting 66 (`'B'`) writes 7:4; reads `zext 3,2`, `zext 2,2` | fw-only 7:4 |
-| `0x2B` | `+0x1B` | dmrIdIndex u8 | read with `lsli 4` (index × 16) | ✓ |
+| `0x2B` | `+0x1B` | dmrIdIndex u8 | read with `lsli 4` (index × 16): `03057654` reads area `0x67` at `(n+1)·0x10`, 3 bytes LE → own ID `33CEC`; 0 or > `0xFFFCDF` → ID 1. The data destination filter uses this per-channel ID (`DATA_RX_PATH.md` §5) | ✓ |
 
 ## 3. Findings
 
@@ -80,3 +80,11 @@ byte accesses only, found by `tools/dm32` constant tracking) and example functio
   per-channel flag would need a byte both the official CPS and the firmware leave alone. Candidates
   (`0x27`, `0x28`, `0x2A`, `0x2C–0x2F`; no byte access seen in fw) are **inferred unused** only; CPS behaviour
   for them is unknown. A global setting outside the channel record keeps CPS compatibility simpler.
+
+## 4. Fields that gate data reception (2026-10-18)
+
+See [DATA_RX_PATH.md](DATA_RX_PATH.md) §5: type `+0x08` 7:4, CC `+0x0D` 3:0, TS `+0x0D` bit 4 (repeater traffic only),
+DCDM `+0x0D` bit 5, RX group list `+0x0F` 5:0 (group texts are accepted only for its 32 IDs or the TX contact; GCall
+Match does not apply to data), Radio ID index `+0x1B`, DMR APRS RX `+0x1A` bit 2 (positions). The TX contact number is
+not in the record: it is a 2-byte entry per channel in area `0x42` (`03056410`). Rx Only `+0x08` bit 3 does not stop
+the automatic replies to private texts.

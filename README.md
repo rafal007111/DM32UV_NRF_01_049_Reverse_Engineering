@@ -40,7 +40,7 @@ Reading order for new work: AGENTS.md, this file, [RE_NOTES.md](docs/RE_NOTES.md
 | Libraries, RTOS, task list | [LIBRARY_SIGNATURES.md](docs/LIBRARY_SIGNATURES.md) |
 | Subsystem tags of unreviewed functions | [SUBSYSTEM_TAGS.md](docs/SUBSYSTEM_TAGS.md) |
 | Baseband chip | [HR_C7000_CROSSCHECK.md](docs/HR_C7000_CROSSCHECK.md), datasheet `docs/HR_C7000 Document 2.pdf` |
-| Receive path | [RX_CALL_PATH_ANALYSIS.md](docs/RX_CALL_PATH_ANALYSIS.md), [DATA_PATH_ANALYSIS.md](docs/DATA_PATH_ANALYSIS.md), [MONITOR_ANALYSIS.md](docs/MONITOR_ANALYSIS.md) |
+| Receive path | [RX_CALL_PATH_ANALYSIS.md](docs/RX_CALL_PATH_ANALYSIS.md), [DATA_PATH_ANALYSIS.md](docs/DATA_PATH_ANALYSIS.md), [DATA_RX_PATH.md](docs/DATA_RX_PATH.md) (texts: why nothing arrives), [MONITOR_ANALYSIS.md](docs/MONITOR_ANALYSIS.md) |
 | Time slot / Colour Code | [TS_ANALYSIS.md](docs/TS_ANALYSIS.md), [CC_MATCH_ANALYSIS.md](docs/CC_MATCH_ANALYSIS.md) |
 | TS/CC Match design (design only, no image) | [MATCH_OPTIONS_DESIGN.md](docs/MATCH_OPTIONS_DESIGN.md) (site inventory, latest), [CC_MATCH_DESIGN.md](docs/CC_MATCH_DESIGN.md) |
 | Transmissions without PTT (summary) | [AUTONOMOUS_TX.md](docs/AUTONOMOUS_TX.md); every TX path with gates: [TX_PATHS.md](docs/TX_PATHS.md) |
