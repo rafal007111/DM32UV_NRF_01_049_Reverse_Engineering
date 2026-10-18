@@ -445,3 +445,18 @@ followed. Per-row text is in the catalog (`evidence` = "pass 3 P2").
 - **`CHANNEL_RECORD.md`:** byte `0x1A` bits 1:0 = repeater shift direction (0 none, 1 +, 2 −; `030314B8`).
 - **`CPS_PROTOCOL.md` §4.2:** contact records live in areas `0x43…` (170 × 24 bytes each), area 11 holds the header.
 - No P2 function touches the TS/CC Match sites or the TX admit inputs.
+
+## 10. Pass 3, work item P3 — handler tables and the UI map (2026-10-18)
+
+Static only (stock `de7dbcbc…`, binutils 2.42, `tools/dm32`). Full result: [UI_MAP.md](UI_MAP.md).
+
+- code-verified: the zero-caller rows are reached through the SRAM copy `030727D0` → `18000800` (permission callbacks
+  `18000804`, key press `18000838` 26 entries, key release `180008A4` 24 entries, side keys `1800090C` 43 entries
+  with names at `030BB424`), the scene table `030B1184` (126 × 12 bytes, scene = 7 · screen + event in `320CB`,
+  dispatched by the task menu body `0303F9BC`), the list renderer switch `030B0C8C` and the Other Func confirm switch
+  `030B22F0`.
+- code-verified: menu lists are descriptors `{string array, count byte, 0x02}` with the Chinese list at X and the
+  English list at X + 8; Other Func = `030B9700`/`030B9708`, 22 items, MOTO last.
+- 181 catalog rows named: 1 high, 25 medium, 155 low (87 scene handlers low by rule: table position + role only).
+- TS/CC Match: new items go at Other Func indices 22/23; the users of the descriptor and of the bound
+  `cmphsi r2,22` (`0304FF9E`) are listed in UI_MAP.md §8. No change to the TS/CC design or the CPS rules from P3.

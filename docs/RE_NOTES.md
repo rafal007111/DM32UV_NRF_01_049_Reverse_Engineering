@@ -275,3 +275,21 @@ access, no CPS word, no image written. Details: [HUB_FUNCTIONS.md](HUB_FUNCTIONS
   `0x14150000` identified (DesignWare-SSI-like layout, inferred).
 - 116 catalog rows reviewed; tagger agreement on them 10/25 decided tags (no display tag; SUBSYSTEM_TAGS.md §7).
   New tests `Analysis.test_hub_lock_pairing`, `Analysis.test_lcd_bus`.
+
+### Pass 3: TS/CC/CPS code, second-tier hubs and the UI map (2026-10-18)
+
+Static only (stock `de7dbcbc…`, binutils 2.42, `tools/dm32`, HR_C7000 datasheet via pdftotext). No radio access, no
+CPS word, no image written. Details: [HUB_FUNCTIONS.md](HUB_FUNCTIONS.md) §8–§10, [UI_MAP.md](UI_MAP.md).
+- code-verified (P1): the CPS PROGRAM-loop `D` command reads SD-card blocks (`03067474`, CMD17/18 over SPI1, CS GPIO 23;
+  dormant, init unreached) — it is not an erase; SYSINFO `C` rewrites program-flash page `0x0300B000` (`0301C98C`);
+  the CPS link is UART0 (ops `18000A88`). CPS_PROTOCOL.md corrected, compatibility rule 5 added.
+- code-verified (P1): **new autonomous TX** — Double Slot (DCDM) CT_CSBK chain `03024120` → 270 s timer → `030243A0` →
+  random backoff `030241A4` → `03024224`, re-armed every 120 s; no Rx Only test found on the chain (TX_PATHS.md §9,
+  AUTONOMOUS_TX.md). Boot-time FM_PTT = 1 in `000169D8` is baseband-only.
+- code-verified (P2): record byte `0x1A` bits 1:0 = shift direction, bit 3 = Talk Around; contacts in areas `0x43…`;
+  `03059D5C` = manual-ID validation (corrects MATCH_OPTIONS_DESIGN.md §3.10.9 reading, verdict unchanged).
+- code-verified (P3): scene table `030B1184`, key/side-key/permission tables (SRAM copy `18000800`), menu descriptors;
+  Other Func `030B9700/8` has 22 items, TS/CC Match go at 22/23 (insertion sites in UI_MAP.md §8).
+- TS/CC Match design unchanged; new read-only subjects `030237AC` (sync type of the last burst) and the DCDM chain.
+- Catalog: 488 high, 407 medium, 232 low, 1044 unreviewed (was 377 / 280 / 46 / 1468).
+
