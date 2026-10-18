@@ -2,6 +2,8 @@
 
     python3 tools/dm32 match <ADDR> <file.c> [--toolchain DIR] [--cflags "..."] [--func NAME] [--sym NAME=ADDR]
 
+`// @func NAME` and `// @sym NAME=ADDR` lines in the C file are read as if given on the command line.
+
 The C file is compiled to an object with the candidate compiler (default $DM32_CSKY_TOOLCHAIN, the pinned
 T-HEAD V3.10.29). The function is read from the object with its literal pool exactly as libsig reads library
 functions (relocation bytes masked, `libsig._functions`). Both sides are then decoded into instructions and
@@ -96,8 +98,10 @@ def decode(code: bytes, base: int, limit: int | None = None, relocs: dict[int, l
     while i + 2 <= n and (limit is None or len(items) < limit):
         if stop is not None and i >= stop and not any(p >= i for p in pools):
             break
-        if stop is not None and i >= stop and i not in pools and i + 2 not in pools:
-            i += 2  # padding between the end of the code and a later pool word
+        if stop is not None and i >= stop and i not in pools:
+            # past the end of the code only referenced pool words are read: the vendor toolchain places one
+            # literal pool behind several functions (e.g. 0300C3AC uses the word at 0300C408)
+            i += 2
             continue
         if i in pools and i + 4 <= n:
             items.append(Item(i, 4, "D", struct.unpack_from("<I", code, i)[0], reloc=relocs.get(i), filler=skip))
@@ -278,7 +282,7 @@ def compare(ref: libsig.RefFn, fw: FwView, addr: int, syms: dict[str, int] | Non
     rel = {r.off: r for r in ref.relocs}
     ri, rend = decode(ref.code, ref.start, relocs=rel)
     cat = fw.size(addr)
-    fcode = fw.read(addr, max(len(ref.code), cat or 0) + 256)
+    fcode = fw.read(addr, max(len(ref.code), cat or 0) + 0x10000)  # far shared pools (lrw32 reach)
     fi, fend = decode(fcode, addr, stop=cat) if cat else decode(fcode, addr, limit=len(ri))
     r_idx, f_idx = _index(ri), _index(fi)
 
@@ -420,9 +424,21 @@ def report(res: Result, addr: int, ref_items: list[Item], toolchain: Path | None
     return "\n".join(out)
 
 
+def source_hints(text: str) -> tuple[str | None, dict[str, int]]:
+    """`// @func NAME` and `// @sym NAME=ADDR` lines of a pilot C file (analysis/matching)."""
+    func = re.search(r"@func\s+(\w+)", text)
+    syms = {m.group(1): int(m.group(2), 16) for m in re.finditer(r"@sym\s+(\w+)=([0-9A-Fa-f]+)", text)}
+    return (func.group(1) if func else None), syms
+
+
 def run(args) -> int:
     toolchain = Path(args.toolchain)
-    syms = {}
+    try:
+        hint_func, syms = source_hints(Path(args.file).read_text(errors="replace"))
+    except OSError as e:
+        print(f"error: {e}")
+        return 2
+    args.func = args.func or hint_func
     for s in args.sym or []:
         k, _, v = s.partition("=")
         syms[k] = int(v, 16)

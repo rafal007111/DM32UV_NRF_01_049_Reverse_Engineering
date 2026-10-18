@@ -444,6 +444,33 @@ class MatchCompiled(unittest.TestCase):
         self.assertEqual(res.verdict, match.FAIL)
 
 
+@unittest.skipUnless(HAVE_IMAGE and HAVE_THEAD, "needs stock image and the pinned T-HEAD toolchain")
+class MatchStock(unittest.TestCase):
+    """Pilot results on the stock image (docs/MATCHING_PILOT.md 3), with the committed pilot C files."""
+
+    def verdict(self, addr, name, flags):
+        from dm32re import match
+        src = image.REPO / "analysis" / "matching" / name
+        func, syms = match.source_hints(src.read_text())
+        ref = match.pick(match.compile_c(src, THEAD, flags), func, addr)
+        return match.compare(ref, match.FwView("stock"), addr, syms)
+
+    def test_shared_pool_pass(self):  # the vendor pool word for 0300C3AC sits behind later functions (0300C408)
+        res = self.verdict(0x0300C3AC, "0300C3AC_rf_carrier_get.c", "-mcpu=ck803 -Os")
+        self.assertEqual(res.verdict, "PASS")
+        self.assertEqual([r.fw.off for r in res.rows if r.fw.kind == "D"], [0x5C])
+
+    def test_best_flag_set(self):
+        best = "-mcpu=ck803 -O2 -fno-reorder-blocks -fno-crossjumping -fno-schedule-insns2"
+        for addr, name in [(0x0002C38C, "0002C38C_dac_write.c"), (0x03023CCC, "03023CCC_popcount8.c"),
+                           (0x03029318, "03029318_slot_flags_clear.c")]:
+            self.assertEqual(self.verdict(addr, name, best).verdict, "PASS", name)
+
+    def test_entry_extension_is_a_difference(self):  # vendor zextb r0, r0 on entry, GCC 6.3 trusts the caller
+        res = self.verdict(0x0002C1D0, "0002C1D0_lcd_cmd.c", "-mcpu=ck803 -Os")
+        self.assertEqual((res.verdict, res.differing), ("FAIL", 1))
+
+
 @unittest.skipUnless(shutil.which("analyzeHeadless") or os.path.exists("/opt/ghidra_12.1.4_PUBLIC"),
                      "Ghidra missing")
 class GhidraDecompile(unittest.TestCase):
