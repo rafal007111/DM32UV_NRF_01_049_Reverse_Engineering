@@ -102,3 +102,11 @@ generation; the vendor assembler predates C-SKY binutils V3.2.0). New read-only 
 functions in `analysis/matching/` give 9 PASS / 5 near with V3.10.29 (about 3 % of vendor code bytes expected at
 scale). Recommendation: no-go for a large matching effort unless the vendor's C-SKY Tools V2.x compiler is found.
 Catalog unchanged. No image written, no radio accessed, no hardware test needed.
+
+### Data/text receive path (2026-10-18)
+
+Static only. [DATA_RX_PATH.md](DATA_RX_PATH.md) answers "why does no message arrive": the SMS Format menu item must
+match the sender's format, group texts need the talkgroup in the channel's RX group list, private texts need the
+channel's Radio ID, and repeater slot/CC must match; owner tests are listed with their TX implications (private texts
+make the radio transmit, also on Rx Only channels). Catalog: 496 high, 411 medium, 232 low, 1032 unreviewed. No image
+written, no radio accessed.

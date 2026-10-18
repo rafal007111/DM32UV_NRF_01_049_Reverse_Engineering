@@ -301,3 +301,21 @@ CPS word, no image written. Details: [HUB_FUNCTIONS.md](HUB_FUNCTIONS.md) §8–
 2026-10-18 owner photo of the front panel: OK/menu, D-pad (P1 left, P2 right), Home/back, 0–9, `*`, `#`; no top key, so TK (key index 9) has no physical key on the owner's DM32UV. [UI_MAP.md](UI_MAP.md) §6.
 
 2026-10-18 matching-decompilation pilot (static): candidate toolchains V3.10.29 (pinned) and Xuantie V3.10.33 B20250328 (`ad5c8564…`) give identical code and libraries; code-verified from the C-SKY binutils V3.2.0 source and assembler tests that every reachable GNU assembler folds `addu/subu rz, rz, ry` to the two-operand form, so the vendor's assembler is older (inferred: C-SKY Tools V2.x, GCC 4.5.1; not reachable). New oracle `tools/dm32 match`; code-verified that the vendor shares literal pools between functions (`0300C3AC` → pool word `0300C408`). Pilot on 30 high-confidence functions with V3.10.29: 9 PASS (tiny 5/9, small 4/18, medium 0/3), 5 near; best single flag set `-O2 -fno-reorder-blocks -fno-crossjumping -fno-schedule-insns2` (8 PASS). Blockers are compiler traits (entry `zextb`/`zexth` of narrow parameters, register allocation, instruction selection, scheduling). Recommendation: no-go without the vendor compiler. Details: [MATCHING_PILOT.md](MATCHING_PILOT.md). No image written, no radio accessed.
+
+### Data and text-message receive path (2026-10-18)
+
+Static only (stock `de7dbcbc…`, GZF `354f9324…`, binutils 2.42, `tools/dm32`, Ghidra 12.1.4). No radio access, no CPS
+word, no image written. Details: [DATA_RX_PATH.md](DATA_RX_PATH.md).
+- code-verified: complete gate list from the data burst to the Inbox (slot, CC without Monitor bypass in the data
+  handlers, header class, destination filter, reassembly and timeout, classifier, SMS Format, length/duplicate, stun,
+  `WLT CMD`, CallDisp deferral, 100-slot ring, "Msg Received" popup and SMS Prompt tone).
+- code-verified: group data is accepted only for the channel's RX group list or TX contact (GCall Match and Monitor
+  are not consulted); private data only for the channel's Radio ID (area `0x67`, invalid entry → ID 1).
+- code-verified: **SMS Format** (block 4 `0x65` bits 2:1) 0 = H-SMS shows DPF `0xD` defined short data, 1 = M-SMS shows
+  IPv4/UDP (TMS-style, ports not checked), 2 = D-SMS shows SAP 3 compressed UDP; texts in another format are dropped.
+  Text is UTF-16LE (H/M) or UTF-16BE (D), converted to GB2312; unmappable characters end the text.
+- inferred (absence): replies to private texts have no Rx Only test (corrects `AUTONOMOUS_TX.md`); record `+0x1D`
+  bits 6/7 (Data ACK / Private Call ACK) have no reader. Correction: self-addressed own-source headers are dropped
+  only in mode 1. New risks R3 (unbounded block write offset) and R4 (Inbox record length).
+- 15 catalog rows reviewed (12 from unreviewed; 1032 unreviewed left). Tests `Analysis.test_data_dst_filter`,
+  `test_data_classifier_formats`, `test_sms_format_setting`.
