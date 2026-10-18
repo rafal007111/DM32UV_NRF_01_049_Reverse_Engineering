@@ -87,7 +87,7 @@ byte 5 : len high     }
 | `G` | 0x47 | **read program flash** | — | read `len` bytes (`03010DDC` → `0002C0E4`) | `53` + `len` data bytes (header reused, `*hdr='S'`) |
 | `W` | 0x57 | **write data flash (SPI)** | `len` bytes follow | if `(addr&0xFFF)==0` erase sector `addr>>12` (`0300F700` → `0002BA00`), then program (`0002BAB0`, page-walked across 4 KiB boundaries via `0002BA60`) | `06` |
 | `R` | 0x52 | **read data flash (SPI)** | — | read `len` bytes (`0300F848` → `0002B9A0`, sector `addr>>12`, offset `addr&0xFFF`) | `57` + `len` data bytes |
-| `D` | 0x44 | **erase data flash (SPI)** | — | erase `ceil(len/512)` 512-byte blocks from `addr` (`03067474`; `1` block if `len<0x200`, else `len>>9`) | `57` header |
+| `D` | 0x44 | **read SD-card blocks** (corrected 2026-10-18, was "erase data flash") | — | read `len>>9` (at least 1) 512-byte blocks from block `addr` of the SD card on SPI port 1 (`03067474`: `CMD17`/`CMD18` + `CMD12`); the card is never initialised in this build, so the reply data are undefined (§8a) | `57` + data |
 | `V` | 0x56 | **info item** `n` (byte 4), `n ≤ 0x40` | — | no flash; see §2.3 | `56 n len data…` |
 
 Notes:
@@ -99,8 +99,8 @@ Notes:
   restores 4 bytes it read from `0x10C` first; the address plumbing of that erase is not fully resolved in the
   decompiler (the erase length 0x1000 and the program window base are code-verified; the per-sector address is
   **inferred**). Granularity: program flash erases in 4 KiB units, programs in `len`-byte runs.
-- `W` erases **one** sector per sector-aligned write and then programs across sector boundaries; `D` is the bulk
-  erase (512-byte granularity). Neither reads back.
+- `W` erases **one** sector per sector-aligned write and then programs across sector boundaries and does not read
+  back. `D` does not touch the data flash at all (SD-card read, §8a).
 - The loop maintains an ack/handshake toggle (`030611B0/CC/D8/F4`, `iVar10`) between frames; `S`/`W` and the
   immediate commands send `06` or the data reply and continue until `FF FF FF FF`-style end or a timeout.
 
@@ -215,6 +215,7 @@ table and evidence):
 | 6 | 64 × 16-byte list |
 | 7, 8, 9, 10 | Inbox / Outbox / Draft / quick-text messages (boot marker at `0xFFF`) |
 | 11 | digital contacts (count at 0, string `"Tx Contact %d/%d"`) |
+| `0x43`… | digital contact records, 24 bytes, 170 per area (`030332AC`, 2026-10-18) |
 | `0x0C`–`0x0E` | Call Log (Missed / Answered / Sent, 20 × 14-byte records) |
 | 15 | RX group lists |
 | 16 | per-channel privacy key list (key id + up to 32-byte key) |
@@ -251,6 +252,9 @@ Rules for a mod (unchanged from §11, re-confirmed):
 4. Do not change the CPS session code (`0302B340`, `0302A448`, `03029FB0`, `0302AA58`), the handshake words
    (`030B08AC`), the address arithmetic, the flash helpers, or the restart after `PROGRAM`. A mod that moves code
    must not shift any of these or the data-flash area layout.
+5. (2026-10-18) Do not place code or data in the program-flash page `0x0300B000…0x0300BFFF` and keep the UART0
+   link (`18000A88` ops table) and the LCSFC helpers (`0002BCA8…0002C164`) unchanged; a `SYSINFO` `C` write rewrites
+   that page (§8a).
 
 ## 6. Open questions for the owner
 
@@ -279,3 +283,33 @@ Rules for a mod (unchanged from §11, re-confirmed):
 - The PC CPS software and codeplug file format (not in this repository).
 - CPS-tagged helpers not on the frame paths: `0002BAB0…0002C164` neighbours, `0301C8E0…0301C98C`,
   `03066F70…030674F0`.
+
+## 8a. Pass 3 additions (2026-10-18, `HUB_FUNCTIONS.md` §8; static, code-verified unless marked)
+
+- **Physical link.** The CPS byte stream is **UART0** (`0x14030000`): the frame loops call the ops table in initialised
+  SRAM `18000A88` (copy of `03072A58`), read = `0302B680` (receive ring `3A6D4`, 4608 bytes, timeout on sem `3B8D8`),
+  write = `0302B798` (polls `USR` bit 1, writes `THR`). That the cable is a USB-serial adapter is inferred.
+- **`D` command correction.** `03067474(buf, block, n)` is an SD-card SPI-mode block read on SPI port 1 (chip select
+  GPIO 23). The SD init code (`03066F18`, `03067216…03067470`: `CMD0`, `CMD8 0x1AA`, `ACMD41`, `CMD58`, `CMD16`) has no
+  caller reachable from a catalog entry and nothing writes the card type `33C60`, so the card is never initialised
+  (dormant driver, inferred). `D` therefore never erases anything; the earlier row in §2.1 is corrected. The write
+  side `030674F0` (`CMD24`/`CMD25`) has no reachable caller either.
+- **`SYSINFO` `C` command.** `0301C98C(off, src, n)` reads the whole 4 KiB program-flash page `0x0300B000` (the page
+  directly below the application VA `0300C000`) into RAM `39490`, patches `n` bytes at `off` (`0x10C` for the `C`
+  command), erases the page and programs it back with interrupts disabled; on an erase error it loops forever. The page
+  is therefore a configuration page that a `SYSINFO` session can rewrite.
+- **Program-flash access.** The internal code flash is a SPI NOR behind the LCSFC controller: command word
+  (`cmd << 24 | addr`) to `0x03000000`, data bytes through `0x03800000` (`0002BCA8`); `06` write enable, `20` sector
+  erase (`0002BDEC`), `02` page program (`0002BEBC`), reads are plain memory copies bounded by the descriptor
+  `18000A64…18000A74` (`0002BE7C`). The quad mode is set at boot by `0002BB9C`.
+- **`V` item 2.** `0305FB7C` → `0301C950` reads 8 bytes from SPI port 3 (`0x14150000`) without a command (a chip ID,
+  device type not determined).
+- **`PCTESTM` sub-commands (as far as P1 needed them).** The `W` action calls `18000AC0[index]`: 0 power DAC (DAC B
+  `0002C3B8`), 1 IQ centre `SIG_CENTER`, 2 two-point modulation amplitude `RF_MOD_BIAS_CTRL[15:0]`, 3 stub, 4
+  two-point bias `RF_MOD_BIAS_CTRL[25:16]`, 5 TX deviation (RF 0x40), 6 sub-audio (RF 0x51), 7–18 stubs or unread.
+  `03055154` maps the current test (`32AD0` group, `32AD1` item) to its area-2 calibration offset (`3E91E`) and
+  `030553C0` loads the area-2 TX calibration (power `384B4`/`384B9`, deviation, modulation) for the test. The per-item
+  TX/RX table of §3 is still not tabulated.
+
+Compatibility rule added to §5: **rule 5** — do not place code or data in the program-flash page `0x0300B000…0x0300BFFF`;
+a `SYSINFO` `C` write rewrites the whole page from its current content.

@@ -169,3 +169,31 @@ responses; use an Rx Only channel where possible; do not send DTMF/2-tone/5-tone
 (`0300DD94`); `030644B8`, `03065290`, `03067764` encoders (read only for their S1/S2/S3 calls); PCTESTM sub-commands;
 `03026518` callers' Rx Only handling in `rxmsg`; IRAM `000169D8`/`00016AD0` register save/restore; the `0306054C` TX
 indicator (draws the bar only, no RF access).
+
+## 9. Additions from pass 3 (2026-10-18, `HUB_FUNCTIONS.md` §8)
+
+**New root: DCDM channel timing (task context: OS timer task; code-verified flow, emission inferred from the TX
+queue).** On a channel with the DCDM bit (record `0x1D` bit 5, CPS "Double Slot"; RX mode 4 in `0301E580`):
+
+| Step | Function | Condition |
+|---|---|---|
+| mode-4 set-up arms the 270 s timer `36490` | `0301E580` → `03024120` → `0300C690` | every load of a DCDM channel |
+| no leader heard: become leader, random backoff | timer → `0300C424` → `030243A0` → `030241A4` (`rand()`, timer `3548C`) | state `3BED8` = 3 |
+| **queue CT_CSBK bursts** | timer → `0300C414` → **`03024224`** → `03029464`/`030294C8`, direction `03023290(4, 2)` | CT_CSBK state `3BEDC` 3/4, carrier flag `0300C3AC` clear or own TX-slot queue empty; else re-backoff |
+| repeat every 120 s; follow a received leader | `0300C6AC(120000)`; `03024908` → `03024418`/`030244B8`/`03024614`/`03024678` | received CT_CSBK (CC 15) |
+| CT_CSBK before own data/CSBKs in mode 4 | `03024794` from the data senders | own transmission only |
+
+Gates found: carrier/queue only. **No Rx Only, CPS-session, test-mode or stun test** in `03024120…03024794` or the
+timer callbacks (inferred: direct calls, the three timer callbacks and the queue path read). The burst goes through
+the normal TX queue → `RF_TX_INTERP` → task `rf` → S5, so it keys the transmitter like any queued burst.
+
+**Boot-time `FM_PTT`.** `000169D8`/`00016AD0` (left unreviewed in §8) are called once at boot through `00015D8C`: FM
+mode and `FM_PTT = 1` during the vocoder/codec start-up, then everything is restored. No PA (`0002C83C`), RF-chip
+(`0002C2F8`) or power-ramp call is on that path and `0301D550` drives both PA GPIOs (35, 55) low at boot, so no
+RF emission is expected (inferred). Not a TX root.
+
+**Corrections to §8 (left unreviewed):** `000169D8`/`00016AD0` reviewed (above); PCTESTM `W` parameters named
+(`CPS_PROTOCOL.md` §8a).
+
+**Safe test practice (addition):** for RX-only tests also avoid DCDM ("Double Slot") channels, or use them only with
+Rx Only set and still expect a CT_CSBK transmission (the Rx Only bit is not checked on that path).

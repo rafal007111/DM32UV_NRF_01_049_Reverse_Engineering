@@ -238,3 +238,29 @@ Inputs as in §0; details in `TX_PATHS.md` §1 and `MATCH_OPTIONS_DESIGN.md` §3
 | Link-layer TX RAM `0x16000000` | table 52, p. 312 | `0300D3EC(off, src, n)` byte copy into it (TX burst loader, direct CSBK) | datasheet + code |
 | Link-layer RX RAM `0x160004B0` | table 53, p. 313 | `0300D41C(off, dst, n)` byte copy from it (all RX handlers) | datasheet + code |
 | `LAYER2_STATUS` (`0x41C`) | p. 309 | `03023880` (RX slot abnormal, dispatcher bit 6) reads it three times and returns | datasheet + code (read to acknowledge, inferred) |
+
+## 10. Registers and peripheral bases named in pass 3 (2026-10-18)
+
+Inputs as in §0 (hashes re-checked). Register names from the overview tables of the datasheet (tables 1–4, 25,
+27–29; `pdftotext -layout`); accesses code-verified with `tools/dm32 fn/acc`. Details per function:
+[HUB_FUNCTIONS.md](HUB_FUNCTIONS.md) §8.
+
+| Register | Datasheet | Firmware | Verdict |
+|---|---|---|---|
+| `IO_DIPLEX0` (`0x034`) bit 17 `pwm0_sel` | §4.4.4.4 p. 68: 1 GPIO_PTA15, 0 PWM_0 | `0301C0EC` (boot) clears it, then PWM 0 set-up `0002BB1C` | datasheet + code: PWM 0 output (backlight use inferred) |
+| `IO_DIPLEX1` (`0x038`) bits 18:13 | p. 70: SPI1 pin selects | `03066F18` (dormant SD init) clears them | datasheet + code |
+| `IO_DIPLEX2` (`0x03C`) bits 18:3, 28/29 | §4.4.4.6 p. 72–73: LCD_DB7…DB0, WR, RS, CS (`lcd_rd` bit 8 kept), DAC_VOUT_MCUB/C | LCD init `03017CE4` clears mask `~0xFFF80107` (bits 3–7, 9–18), `0301CA18` clears 9–15, `0301CB88` clears 28/29 | **answers the open question of `HUB_FUNCTIONS.md` §5:** `0x1100003C` is the pin-mux register; the LCD init switches the pins to the I80 LCD bus (`0x12000000` is the I80 controller, datasheet table 14) |
+| `ADC_CONTROL` (`0x074`) bits 8/7 | §4.6.5.2 p. 95: `enadc0`/`enadc1` I/Q ADC enable | `0301E4D0(on)`; `usb` task, PCTESTM, DMR init | datasheet + code |
+| `AUDIO_CONTROL` (`0x080`) bits 0, 5 | p. 96: `tx_voice_source`, `ahb_rd_voice_en` | `0305D1D8` (bit 0), `00016104` (bit 5 off) | datasheet + code |
+| `LINEOUT_CTRL` (`0x088`) | p. 97: bit 31 `standby_lo`, bits 1/0 line1/line2 out | `03021AD8`, codec init `03021AF8` waits for bit 31 = 0 | datasheet + code |
+| `SIG_CENTER` (`0x108`) | table 27: TX/RX IQ offsets | `03021764` (PCTESTM `W` 1) | datasheet name + code |
+| `RF_MOD_BIAS_CTRL` (`0x114`) | §9.2.2.6 p. 330: 25:16 `two_point_bias`, 15:8 `sig_reduce`, 7:0 `phase_reduce` | `03021748`, `03021788` (RF set-up `0300DB48`, PCTESTM) | datasheet + code: TX modulation level |
+| `INTERP_CLEAR` (`0x3B0`) bits 4/5 | p. 105: PCM interrupt clears | `0002E378`/`0002E388` (PCM ISRs `0002E1F0`/`0002E254`) | datasheet + code |
+| `LAYER2_TXRX_CTRL` bit 0 `autotest`, bit 23 `syncfail_layer2_rx` | p. 305 | `030216F4`, `030231A8` | datasheet + code |
+| `LAYER2_SLOTON`/`SLOT_CNT`/`SLOT_UPDATE` (`0x404`/`0x40C`/`0x414`) | pp. 304–306 | `030231C0` (active TX master, temporary slot), `03023A88`/`03023AD8` (DCDM temporary slot) | datasheet + code |
+| `FM_BANDWIDTH` (`0x500`) | §11.2.2.2 p. 332 | `0300C2CC` writes `0x5F` (25 kHz TX/RX/CTCSS, pre-emphasis, BPF) | datasheet + code |
+| DAC block `0x140F0000` | table 25 (printed base `0x140D0000`, shared with the ADC table): `+0` power-down, `+4` low-power, `+8/+0xC/+0x10` data A/B/C | `0002C38C` (data), `0301CB88` (init); channel B = power-control DAC (`0002C3B8`) | layout datasheet + code; base printed differently in the datasheet (typo, inferred) |
+| Peripheral bases | memory map tables: `0x12000000` I80, `0x14010000` WDT, `0x14030000/40000/50000` UART0/1/2, `0x14060000/70000` I2C0/1, `0x14080000` RTC, `0x140A0000/B0000/E0000` SPI0/1/2, `0x140C0000` PWM, `0x140D0000` ADC, `0x15000000` SDIO | CPS on UART0, GNSS on UART1, data flash on SPI0, SD on SPI1; `0x14150000` (SPI port 3, 8-byte ID read) is not in the datasheet tables | datasheet + code |
+
+`FM_PTT` at boot: `000169D8` sets `FM_PTT = 1` with WORK_MODE FM during the vocoder start-up and `00016AD0` restores
+it; no PA or RF-chip call is on that path (inferred no emission, `TX_PATHS.md` §9).

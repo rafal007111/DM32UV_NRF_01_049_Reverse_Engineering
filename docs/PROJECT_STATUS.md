@@ -87,3 +87,11 @@ data-flash API and SPI NOR commands, GPIO, menu framework, channel/zone helpers)
 `0x12000000`, ST7789-class controller, 240 × 320 RGB565 direct write, drawing primitives, fonts in program and SPI data
 flash, status/soft-key bars and popups). 116 catalog rows reviewed: now 377 high, 280 medium, 46 low, 1468 unreviewed.
 No image written, no radio accessed, no hardware test needed.
+
+### Pass 3: TS/CC/CPS code, hubs and the UI map (2026-10-18)
+
+Static only. P1 (169 rows), P2 (74 rows) and P3 (181 rows) reviewed; catalog now 488 high, 407 medium, 232 low, 1044
+unreviewed. CPS `D` corrected to a dormant SD read; a second autonomous TX root (DCDM CT_CSBK) recorded in TX_PATHS.md
+§9; [UI_MAP.md](UI_MAP.md) maps scenes, menus, keys and the TS/CC Match insertion points. No image written, no radio
+accessed. Owner hardware observations listed in UI_MAP.md §10 (screen only).
+

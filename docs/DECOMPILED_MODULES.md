@@ -93,3 +93,13 @@ see [SUBSYSTEM_TAGS.md](SUBSYSTEM_TAGS.md) for the method and weak spots, and
 The 76 unreviewed rows with ≥ 10 direct callers and 40 display/data-flash rows on the same paths were named
 (116 rows; catalog now 377 high, 280 medium, 46 low, 1468 unreviewed, 795 `auto:`). See
 [HUB_FUNCTIONS.md](HUB_FUNCTIONS.md).
+
+## Pass 3 (2026-10-18)
+
+- P1: 169 TS/CC/CPS-relevant tagged rows (95 high, 62 medium, 12 low): CPS link = UART0, CPS `D` = dormant SD-card
+  block read, SYSINFO `C` = program-flash page `0x0300B000`, LCSFC program-flash helpers, DCDM CT_CSBK autonomous TX
+  chain. See [HUB_FUNCTIONS.md](HUB_FUNCTIONS.md) §8, CPS_PROTOCOL.md §8a, TX_PATHS.md §9.
+- P2: 74 second-tier hubs with 5–9 direct callers (13 high, 41 medium, 20 low). HUB_FUNCTIONS.md §9.
+- P3: 181 zero-caller rows reached through the key, side-key, permission and scene tables (1 high, 25 medium, 155 low).
+  [UI_MAP.md](UI_MAP.md).
+- Catalog now 488 high, 407 medium, 232 low, 1044 unreviewed, 547 `auto:` (before pass 3: 377 / 280 / 46 / 1468 / 795).
