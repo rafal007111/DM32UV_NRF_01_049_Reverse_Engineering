@@ -58,6 +58,13 @@ class StockImage(unittest.TestCase):
         self.assertEqual((iram.name, iram.va, iram.end, iram.file_off), ("IRAM", 0x10000, 0x2F0B4, 0xC0C38))
         self.assertEqual(img.u32(0x03072940), 0x03017560)  # Monitor handler table entry 25
 
+    def test_ui_tables(self):  # docs/UI_MAP.md §2, §8
+        img = image.Image("stock")
+        scene = lambda n: img.u32(0x030B1184 + 12 * n)  # 12-byte scene records
+        self.assertEqual((scene(0), scene(7), scene(14)), (0x0303B374, 0x0303DD68, 0x0303D880))
+        self.assertEqual([img.u32(0x03072808 + 4 * k) for k in (0, 14, 23)], [0x03014E38, 0x03014D20, 0x03014CB4])
+        self.assertEqual(img.read(0x030B9700, 16).hex(), "50960b0316020000a8960b0316020000")  # Other Func, 22 items
+
     def test_wrong_hash_rejected(self):
         with self.assertRaises(image.ImageError):
             image.Image("stock", path=image.INPUTS / "current_scan_tick_fix.progmem.bin")
@@ -92,6 +99,9 @@ class Analysis(unittest.TestCase):
         callees = {(s, t) for s, t, k in self.x.callees_of[0x03017560]}
         self.assertIn((0x030175E8, 0x030174E0), callees)
         self.assertIn((0x030175E0, 0x0301742C), callees)
+
+    def test_cps_d_command_reads_sd(self):  # CPS_PROTOCOL.md §8a: PROGRAM-loop D -> sd_read_blocks
+        self.assertEqual(self.callers(0x03067474), {(0x0302A696, 0x0302A448), (0x0302A6A2, 0x0302A448)})
 
     def test_register_and_ram_accesses(self):
         sites = {(a.site, a.kind) for a in self.x.accesses_in(0x11000384, 0x11000385)}
