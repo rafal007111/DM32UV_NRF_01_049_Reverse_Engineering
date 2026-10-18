@@ -95,3 +95,10 @@ unreviewed. CPS `D` corrected to a dormant SD read; a second autonomous TX root 
 §9; [UI_MAP.md](UI_MAP.md) maps scenes, menus, keys and the TS/CC Match insertion points. No image written, no radio
 accessed. Owner hardware observations listed in UI_MAP.md §10 (screen only).
 
+### Matching-decompilation pilot (2026-10-18)
+
+Static only. [MATCHING_PILOT.md](MATCHING_PILOT.md): no reachable toolchain is the vendor's (V3.10.33 = V3.10.29 in code
+generation; the vendor assembler predates C-SKY binutils V3.2.0). New read-only oracle `tools/dm32 match`; 30 pilot
+functions in `analysis/matching/` give 9 PASS / 5 near with V3.10.29 (about 3 % of vendor code bytes expected at
+scale). Recommendation: no-go for a large matching effort unless the vendor's C-SKY Tools V2.x compiler is found.
+Catalog unchanged. No image written, no radio accessed, no hardware test needed.

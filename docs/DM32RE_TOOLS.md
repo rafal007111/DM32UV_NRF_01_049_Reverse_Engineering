@@ -93,3 +93,16 @@ tables included), strings, MMIO bases, RAM owners, reviewed and propagated calle
 neighbourhood; `--write-catalog` writes `auto: <tag>` into the subsystem column of rows above the threshold
 (confidence stays `unreviewed`). Method, thresholds and spot-check results: [SUBSYSTEM_TAGS.md](SUBSYSTEM_TAGS.md);
 CSV `analysis/decompiled_modules/subsystem_tags.csv`. Tests: `TagRules`, `TagStock`.
+
+## Matching oracle (2026-10-18)
+
+`python3 tools/dm32 match <ADDR> <file.c> [--toolchain DIR] [--cflags "..."] [--func NAME] [--sym NAME=ADDR]
+[--diff-only]` (`tools/dm32re/match.py`, stdlib plus the candidate's gcc/as/objdump, read-only) compiles the C file,
+reads the function and its literal pool from the object with `libsig`'s relocation masking, and compares it item by
+item with the firmware at `ADDR` over the catalog size (plus the pool words it references, which the vendor
+toolchain shares between functions). PC-relative fields are compared by the item they point at, relocations are
+resolved against the firmware (symbol names ending in an 8-digit address, `--sym`, `// @sym` lines in the file,
+string literals). Exit codes: 0 PASS, 3 PASS-ENC (only the vendor 16-bit `addu/subu` encoding differs), 4
+UNRESOLVED, 1 FAIL, 2 error. `analysis/matching/pilot.py` runs every `analysis/matching/*.c` over 13 flag sets and
+writes `pilot_results.csv`. Tests: `MatchPure`, `MatchCompiled`, `MatchStock`. Pilot results and the go/no-go
+estimate: [MATCHING_PILOT.md](MATCHING_PILOT.md).

@@ -62,3 +62,11 @@ Read-only, run with `python3 -I` after `tools/static/objdump_image.sh` has produ
 - `tools/static/site_bytes.py STOCK INSTALLED VA:len …` — prints the stock bytes of patch-design sites and compares them
   with the installed image (used for the site tables in `MATCH_OPTIONS_DESIGN.md` §3.7–3.9).
 - Datasheet text: `pdftotext -layout "docs/HR_C7000 Document 2.pdf" c7000.txt` (poppler; page numbers = "第 N 页" footers).
+
+### Matching oracle (2026-10-18)
+
+`python3 tools/dm32 match <ADDR> <file.c> [--toolchain DIR] [--cflags "..."]` compiles one C function and compares
+it with the firmware (PASS / PASS-ENC / UNRESOLVED / FAIL with a per-instruction diff);
+`analysis/matching/pilot.py` runs the pilot files over a flag matrix. Candidate toolchains tried and the verdict on
+the vendor compiler: [MATCHING_PILOT.md](MATCHING_PILOT.md). No candidate was adopted: Xuantie V3.10.33 B20250328
+(`ad5c8564…`) generates the same code as the pinned V3.10.29, which stays the build toolchain for our modules.

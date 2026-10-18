@@ -191,11 +191,15 @@ class BufferView(FwView):
 
 
 # ---- compile and extract -----------------------------------------------------------------------------
+PREFIXES = ("csky-elfabiv2-", "csky-abiv2-elf-")  # V3.x toolchains / older C-SKY Tools V2.x releases
+
+
 def tool(toolchain: Path, name: str) -> Path:
-    exe = toolchain / "bin" / f"csky-elfabiv2-{name}"
-    if not exe.exists():
-        raise FileNotFoundError(f"{exe} missing")
-    return exe
+    for prefix in PREFIXES:
+        exe = toolchain / "bin" / f"{prefix}{name}"
+        if exe.exists():
+            return exe
+    raise FileNotFoundError(f"{toolchain / 'bin'}/{{{','.join(PREFIXES)}}}{name} missing")
 
 
 def compile_c(src: Path, toolchain: Path, cflags: str, out_dir: Path | None = None) -> bytes:
