@@ -189,8 +189,27 @@ Owner report (2026-10-18, hardware-verified by the owner, names only): **SK1** a
 side keys; **P1** and **P2** are the programmable left and right keys of the main D-pad, whose up and down
 positions are the navigation keys (consistent with keys 12/13 = UI codes 18/19, still inferred). Each of these four
 keys can be assigned a short-press and a separate long-press function in CPS. The owner does not know what **TK**
-is. Not yet known: which key index (2, 3, 6, 8, 9, 11) belongs to which name. Since all four named keys have a
-long-press function, key 9 (no long-press entry used) is probably not SK1/SK2/P1/P2 (inferred).
+is. The owner had P1 short = Zone Down and P2 short = Zone Up assigned in CPS (values 17 and 16 of §5); not
+compared with the owner's codeplug bytes, which are not in the repository.
+
+**Key index → name (2026-10-18, code-verified).** The press handlers pass a key code to `03016CD4`, which stores it
+in `3931D`; the short-press release `03016CF0` and the long-press timer callback `03016864` map that code to a slot
+of `392F4`, and the slots are filled from block 4 by `030168CC` (boot) and `0304B158` (menu save):
+
+| Key index | Press handler | Key code | Name | Short slot / block 4 | Long slot / block 4 |
+|---|---|---|---|---|---|
+| 3 | `03014870` | 30 | SK1 (side key) | `392F4+0x14` / `0x87` (setting `0x47`) | `392F4+0x00` / `0x88` (`0x4C`) |
+| 6 | `030147DC` | 29 | SK2 (side key) | `+0x18` / `0x89` (`0x48`) | `+0x04` / `0x8A` (`0x4D`) |
+| 9 | `0301473C` | 31 | TK | `+0x1C` / `0x8B` (`0x4B`) | `+0x08` / `0x8C` (`0x50`) |
+| 8 | `030146C4` | 21 | P1 (D-pad left) | `+0x20` / `0x8D` (`0x49`) | `+0x0C` / `0x8E` (`0x4E`) |
+| 11 | `0301464C` | 22 | P2 (D-pad right) | `+0x24` / `0x8F` (`0x4A`) | `+0x10` / `0x90` (`0x4F`) |
+| 2 | `03014958` | 5 | not programmable | fixed `030155EC` (UI code 5, or factory reset `030323F4` when `3FDDA` bit 2) | fixed `03015570` |
+
+So the long-press slots 0–4 and short-press slots 5–9 are both in the order SK1, SK2, TK, P1, P2. Key 9 is **TK**:
+the firmware reads a key input for it and has short/long slots, but the owner does not know a TK key on this radio
+(possibly a key that only some hardware variants have; not established). The earlier note that key 9 uses no
+long-press entry is superseded: TK has a long-press slot like the others. The physical side (left/right, which
+side key is SK1) of the names comes from the owner report above; the index mapping is code-verified.
 
 Permission callbacks (`030727D4` → `18000804`, called by `030140E4`):
 
@@ -247,10 +266,9 @@ call display, LED, RF, SD card). The SD-card write `030674F0` is the only high r
 ## 10. Open questions and owner observations (screen-only, no TX)
 
 1. Names answered by the owner on 2026-10-18 (§6): SK1/SK2 = side keys, P1/P2 = D-pad left/right, each with short
-   and long press; TK unknown to the owner. Still open: the key index of each name, and what TK is (possibly a
-   key not present on this model, or a top key; not established). To map indices, assign distinct functions that
-   do not transmit and only change the screen (e.g. a backlight or display function; not Monitor, Alarm, TBST or
-   Sub PTT) in CPS and note which key does what. This needs a CPS write, so it is the owner's decision.
+   and long press; TK unknown to the owner. Key indices resolved statically the same day (§6 table: SK1 = 3,
+   SK2 = 6, TK = 9, P1 = 8, P2 = 11; key 2 is a fixed key). Still open: whether a physical TK key exists on this
+   model (it is key index 9 in the firmware), and what key 2 is physically. No CPS write is needed for the mapping.
 2. Screen roles L12, L13, L15, L17 are inferred; open each screen and note its title.
 3. Keys 4, 10, 24, 25 post UI codes whose meaning is inferred.
 4. Left unreviewed: scene handler bodies (by rule), the image pointer table at `180009B8`, `030594D4`.

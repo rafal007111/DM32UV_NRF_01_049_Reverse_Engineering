@@ -295,3 +295,5 @@ CPS word, no image written. Details: [HUB_FUNCTIONS.md](HUB_FUNCTIONS.md) §8–
 
 
 2026-10-18 owner report (hardware-verified by the owner): SK1/SK2 are the programmable side keys, P1/P2 the programmable left/right keys of the D-pad (up/down navigate); each has a short- and a long-press function. TK is unknown to the owner. Key-index mapping still open. Details: [UI_MAP.md](UI_MAP.md) §6, §10.
+
+2026-10-18 programmable keys mapped (code-verified): key index 3 = SK1, 6 = SK2, 9 = TK, 8 = P1 (D-pad left), 11 = P2 (D-pad right) via key codes 30/29/31/21/22 in `03016CD4`/`03016CF0`/`03016864`; short-press slots `392F4+0x14..0x24` and long-press slots `+0x00..0x10` load from block 4 `0x87..0x90` (`030168CC`, `0304B158`); key 2 (code 5) is fixed (`030155EC`/`03015570`). Owner had P1 short = Zone Down, P2 short = Zone Up. Details: [UI_MAP.md](UI_MAP.md) §6.
