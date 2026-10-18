@@ -341,3 +341,69 @@ work.
 Tagger check (recorded in [SUBSYSTEM_TAGS.md](SUBSYSTEM_TAGS.md) §7): 53 reviewed rows carried an `auto:` tag; 28
 were `shared (UI tasks)` (true by construction, not counted). Of the 25 decided tags **10 agree** and **15
 disagree**; the main cause is that the tagger has no display tag and did not know the LCD base `0x12000000`.
+
+## 8. Pass 3, work item P1 — code relevant to TS/CC Match and CPS compatibility (2026-10-18)
+
+Static only (inputs re-checked: stock `de7dbcbc…`, installed `156a4872…`, GZF `354f9324…`, datasheet `d60f652e…`;
+binutils 2.42 through `tools/dm32`, datasheet text with `pdftotext -layout`). No serial port, no CPS word, no radio
+access, no image file written.
+
+**Work list.** Every `unreviewed` row tagged `auto: Codeplug/channels` (20), `auto: Baseband registers` (48),
+`auto: shared (DMR tasks)` (28), `auto: CPS/USB` (37), `auto: Digital RX/DMR` (7), `auto: Digital TX/DMR` (11) and
+`auto: Digital TX/DMR data` (3): **154 rows, all read**. On the way 17 more rows were read and named (the mode-4
+timer helpers, the SPI port and program-flash helpers they call, the DAC writer, two GPIO/pin-mux helpers), and two
+reviewed rows were corrected (`03067474`, `0002C3B8`). 171 catalog rows changed; confidence of the 169 new rows:
+**95 high, 62 medium, 12 low**. Per-row roles are in the catalog (`evidence` = "pass 3 P1").
+
+### 8.1 Results by group
+
+| Group | Rows | Main result (labels as in the catalog) |
+|---|---:|---|
+| HR_C7000 registers | 24 | Register names from the datasheet tables (system control, baseband control, link layer, FM; §10 of [HR_C7000_CROSSCHECK.md](HR_C7000_CROSSCHECK.md)): FM bandwidth `0300C2CC`, ADC enable `0301E4D0`, line out `03021AD8`, two-point modulation `03021748`/`03021788`, IQ centre `03021764`, PHY test `030216F4`, TX voice source `0305D1D8`, AHB voice read `00016104`, PCM interrupt clear `0002E378`/`0002E388`, the layer-2 slot set-up `030231A8`/`030231C0`/`03023258`/`03023A88`/`03023AD8` (datasheet + code) |
+| DCDM (RX mode 4) | 20 | The channel-timing (CT_CSBK) state machine `3BED8`/`3BEEC` with four OS timers (`35358` periodic, `35390`, `3548C`, `36490` one-shot) — and a transmitter: **`03024224` queues CT_CSBK bursts on its own** (§8.2) |
+| CPS/USB | 31 | The CPS link is **UART0** (`0x14030000`, ops table `18000A88`: read `0302B680`, write `0302B798`); program flash is an SPI NOR behind the LCSFC controller (`0002BCA8` command issue, `0002BDEC` erase, `0002BEBC` program, `0002BE7C` read); the `SYSINFO` `C` command is a read-modify-erase-write of the **4 KiB program-flash page `0x0300B000`** (`0301C98C`); CPS `V` item 2 is an 8-byte ID read from **SPI port 3** (`0301C950`); the `PCTESTM` `W` parameters go through the SRAM table `18000AC0` (DAC power, IQ centre, modulation, deviation, sub-audio) and `030553C0` loads the area-2 TX calibration |
+| SD card (SPI1) | 9 | A complete SD-card SPI-mode driver (CMD0/8/9/12/16/17/18/24/25/55/58, ACMD23/41, SDHC by card type `33C60`) on SPI port 1 with chip select GPIO 23; its init code (`03066F18`, `03067216…`) is **not reached** from any catalog entry and nothing writes the card type, so the driver is **dormant** (inferred). **Correction:** the CPS `PROGRAM`-loop command `D` calls `03067474` = **SD block read** (`CMD17`/`CMD18`, 512-byte blocks, reply `W` + data), not a data-flash erase (§8.3) |
+| Codeplug/channels | 20 | Per-field channel setters, all with the same pattern (mutex `3E34C`, working copy `3E1F8` when a roaming candidate is active, else `0300FA28` on the record byte): squelch `0300DE8C`, VOX `0301BDB4` (body `0x15` bit 4), scan list `0302F59C`, power `03030EDC`, signalling `03031060`, **Talk Around `030566CC` = body `0x1A` bit 3** (the "fw-only" bit of [CHANNEL_RECORD.md](CHANNEL_RECORD.md)), RX group list `030573A0`, DMR ID `03057688`, key `0305CFF0`, encryption `0305D0A0`, APRS `03062744`/`03062828`; the factory reset / default-codeplug writer `030323F4`; four list scenes |
+| Data / TX queue | 14 | `txmsg` body `0301F118`, SMS/data builders (`03026BB8`, `03027050`, IPv4/UDP header `03025BC0`), CRC-9 `0300C154` and CRC-32 `0300C224` (polynomial constants), voice LC header / PI header queueing `0302958C`/`03029618`, data terminator `030268CC`, queue depth `03029E4C` |
+| Privacy | 25 | AES (S-box `180011A4`, SubBytes/ShiftRows/MixColumns/AddRoundKey, Nr 10/14), IV update LFSRs, received-IV check with debug labels "IV err:"/"IV ok:" going to empty print stubs, TX voice encryption `000157F4` |
+| Boot / other | 18 | Clock set-up `0002C9B8`, program-flash quad mode `0002BB9C`, codec init `03021AF8`, PWM/DAC pin mux, PA GPIOs low and task `cds` `0301D550`, power-on factory-reset key check `0305F4D4`, recording playback `03061D50`, RTOS wait wrappers of `sysint`/`txslot`/`CclTraffic` |
+
+### 8.2 Findings that matter for TX, the TS/CC Match design and CPS compatibility
+
+1. **New autonomous transmitter: DCDM channel timing (code-verified flow; RF emission inferred from the queue).** When
+   a channel with the DCDM ("Double Slot", record `0x1D` bit 5) bit is loaded, `0301E580` calls `03024120`, which
+   arms the 270 s timer `36490`. If no timing leader is heard, `030243A0` makes the radio the leader, a random backoff
+   (`030241A4`, `rand()`) arms timer `3548C`, and its callback `03024224` queues CT_CSBK bursts (`03029464` →
+   `030294C8`) after `03023290(4, 2)`; the cycle repeats every 120 s (`0300C6AC(120000)`). Received CT_CSBKs
+   (`03024908`) re-time or join the leader. The only gate in the chain is the carrier flag / own TX queue
+   (`0300C3AC`, `3C6FC[3BEAC]`); **no Rx Only, CPS-session or stun test** was found in `03024120…03024794`
+   (inferred, direct calls and the timer callbacks followed). Added to [TX_PATHS.md](TX_PATHS.md) and
+   [AUTONOMOUS_TX.md](AUTONOMOUS_TX.md). It runs only in RX mode 4, which TS/CC Match does not touch.
+2. **Boot-time `FM_PTT = 1` is baseband-only (inferred).** `000169D8` (saved/restored by `00016AD0`), called once at
+   boot through `00015D8C`, sets WORK_MODE FM and `FM_PTT = 1` during the vocoder/codec start-up. Its call subtree
+   (direct calls, depth 6) contains no PA (`0002C83C`), RF-chip (`0002C2F8`) or power-ramp (`0002B364`) call, and
+   `0301D550` drives both PA GPIOs low at boot; so this keys only the baseband modulator (closes the open item of
+   `TX_PATHS.md` §8).
+3. **TS/CC Match design: no change.** None of the 154 functions reads or writes `33CCC`, `3BEA8`, `3C620`,
+   `3C61A`, `33CCD` or the gate registers; the only new reader of a per-burst field is `030237AC` (TX slot chooser
+   input `3C616` = sync type of the last burst), which has the same value (BS) for both slots of a repeater, so TS
+   Match off does not change it. The DCDM state machine runs only in RX mode 4 and stays a read-only subject. The
+   read-only subject list of `MATCH_OPTIONS_DESIGN.md` §3.10 gains `030237AC` and the DCDM chain (§3.10.10 there).
+4. **CPS compatibility: one correction, one addition.** `D` is a dormant SD-card read, so a `PROGRAM` session can
+   only erase data flash through sector-aligned `W` writes (the rule "a CPS write replaces whole sectors" stands).
+   The `SYSINFO` `C` command rewrites the program-flash page `0x0300B000`, i.e. the 4 KiB **in front of the
+   application** — a mod must not place code or data there ([CPS_PROTOCOL.md](CPS_PROTOCOL.md) §2.2, §5).
+
+### 8.3 Tagger agreement (P1 rows)
+
+Of the 169 newly reviewed rows, 155 carried an `auto:` tag; 29 `shared (…)` rows are not counted. Of the 126
+decided tags **51 agree** (40 %): Codeplug/channels 14 of 20, Baseband registers 13 of 48, CPS/USB 13 of 37,
+Digital TX/DMR 5 of 11, Digital TX/DMR data 3 of 3, Digital RX/DMR 3 of 7. Main causes: the IRAM privacy and
+vocoder code and the mode-4 timer code sit next to baseband code (neighbourhood and RAM evidence), program-flash,
+SPI and SD helpers are reached from the CPS task, and menu scenes that set channel fields read like codeplug code.
+Recorded in [SUBSYSTEM_TAGS.md](SUBSYSTEM_TAGS.md) §8.
+
+### 8.4 Left open (P1)
+
+The privacy bit-transform `0001496C` and its helpers (`low`), the vocoder frame processing `00016838`, the
+LCSFC status compare in `0002BC7C`, and the meaning of the CT_CSBK fields beyond the ETSI DCDM reading.

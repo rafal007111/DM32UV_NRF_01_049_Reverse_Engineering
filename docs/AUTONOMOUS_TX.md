@@ -19,12 +19,13 @@ changes none of them.
 | **GPS/APRS position beacon** (periodic) | position text message to the configured ID (`400A4`), optionally on a dedicated beacon channel | interval block 4 `0x301` × 30 ticks (≥ 30), GNSS fix or the `0x302` option, not on Rx Only channels, not while scanning | `GNSS_ANALYSIS.md` §3b |
 | **VOX** (voice-operated TX) | normal voice transmission, as if PTT were pressed | Other Func VOX on (`3E9D4+0x30` bit 0), radio idle (`0305DF8C`), see below | this file §1 |
 | **Analog selective-call decode** (DTMF / 2-tone / 5-tone, 2026-10-17) | acknowledgement tones (`03068D04` → `03068B4C`/`03068C1C`) | analog channel whose signalling system (channel `+0x16` bits 3:1 = 2/4/6) decodes a matching code with response type 2; **no Rx Only test found**; the same decoders can stun (`0xA6`), kill (`0xA5`) or revive (`0xA0`) the radio persistently and restart it | `TX_PATHS.md` §3 |
+| **DCDM channel timing** (2026-10-18) | CT_CSBK channel-timing bursts about 270 s after a "Double Slot" (DCDM) channel is selected when no timing leader is heard, then every 120 s, after a random backoff (`03024120` → `030243A0` → `03024224`) | channel DCDM bit (record `0x1D` bit 5, RX mode 4); carrier/queue check only; **no Rx Only test found** | `TX_PATHS.md` §9 |
 | TX admit before an own call (repeater mode) | repeater wake-up | only after PTT (listed for completeness) | `MATCH_OPTIONS_DESIGN.md` §3.6 |
 
 Safe test practice (owner, revised 2026-10-17 from `TX_PATHS.md`): for RX-only tests use an Rx Only channel where
-possible (it blocks PTT, VOX, TBST, the beacon, roaming and the CSBK replies, but **not** the alarm or the analog
-decode acknowledgement), disable Lone Worker, Auto Roaming, VOX, the GPS beacon interval and the emergency alarm in
-CPS, set the analog signalling system of test channels to none (or disable decode responses), do not send texts,
+possible (it blocks PTT, VOX, TBST, the beacon, roaming and the CSBK replies, but **not** the alarm, the analog
+decode acknowledgement or the DCDM CT_CSBK), disable Lone Worker, Auto Roaming, VOX, the GPS beacon interval and the emergency alarm in
+CPS, do not use DCDM ("Double Slot") channels (2026-10-18: they send CT_CSBKs on their own, Rx Only does not block them), set the analog signalling system of test channels to none (or disable decode responses), do not send texts,
 CSBKs or DTMF/2-tone/5-tone codes to the radio from another radio unless a reply transmission is acceptable, and do
 not press `Alarm` or the TBST/Sub PTT side keys.
 

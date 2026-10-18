@@ -183,3 +183,20 @@ counted). Of the 25 decided tags **10 agree** (40 %) and **15 disagree**:
 
 So for low-level hubs the tag is a weak lead; the LCD base `0x12000000` and the SPI bases are now identified but the
 tagger (`tools/dm32re/tag.py`) was not changed in this pass. The reviewed rows carry their own subsystem.
+
+## 8. Tag check from pass 3 (2026-10-18, `HUB_FUNCTIONS.md` §8–§9, `UI_MAP.md`)
+
+**P1** (TS/CC/CPS-relevant tags, 169 newly reviewed rows, 155 with an `auto:` tag, 29 `shared (…)` not counted): of 126
+decided tags **51 agree** (40 %).
+
+| Auto tag | Decided | Agree | Main disagreements (reviewed subsystem) |
+|---|---:|---:|---|
+| `Codeplug/channels` | 20 | 14 | menu list scenes (5), home-screen frame (1) |
+| `Baseband registers` | 48 | 13 | DCDM timer/state code (8), IRAM privacy and vocoder (11), boot init (6), utilities (4), SPI/LCSFC/RTOS (4) |
+| `CPS/USB` | 37 | 13 | program-flash LCSFC helpers (9), dormant SD-card driver (7), SPI ports (5), RTC/RF/utility (3) |
+| `Digital TX/DMR` | 11 | 5 | privacy/vocoder IRAM (4), RTOS wait wrappers (2) |
+| `Digital TX/DMR data` | 3 | 3 | — |
+| `Digital RX/DMR` | 7 | 3 | RTOS wait wrappers (3), own call end = TX (1) |
+
+Cause: low-level helpers (flash, SPI, timers, crypto) inherit the tag of the task or neighbour that reaches them; the
+tagger knows no LCSFC, SPI, SD, DAC or privacy owner. The tagger was not changed.

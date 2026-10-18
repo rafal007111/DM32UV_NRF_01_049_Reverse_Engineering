@@ -44,7 +44,7 @@ byte accesses only, found by `tools/dm32` constant tracking) and example functio
 | `0x19` | `+0x09` | scanListIndex **6:2** (1-based) | **5:0**: `0304B158` setting 50 writes `ins 5,0`; `andi 63` then scan-list loader `0302E1A4` (`0304D14E`, `0304D998`); `0302F418` scan start | ✗ qdmr offset/width disagree with fw |
 | `0x1A` | `+0x0A` | preventTalkaround 7 | `ins 7,7` (`030175F4`) | ✓ |
 | `0x1A` | `+0x0A` | admitCriterion 5:4 | `&0x70` (6:4) | ≈ |
-| `0x1A` | `+0x0A` | — | bit 3 written by `030566CC(v&1)` | fw-only, unknown |
+| `0x1A` | `+0x0A` | — | bit 3 written by `030566CC(v&1)` = **Talk Around** (side key 3 "Talk Around" and Other Func item 5 call it; 2026-10-18, `HUB_FUNCTIONS.md` §8) | fw-only, named |
 | `0x1A` | `+0x0A` | rxDMRAPRS 2 | `zext 2,2`, `&0x04` | ✓ |
 | `0x1A` | `+0x0A` | — | `&0x03` read | fw-only, unknown |
 | `0x1B` | `+0x0B` | emergencyNotification 7, emergencyACK 6, emergencySystemIndex 2:0 | only whole-word reads seen | not checked |

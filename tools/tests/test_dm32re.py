@@ -176,8 +176,10 @@ class TagStock(unittest.TestCase):
         cls.tags = tag.Tagger(cli.Ctx("stock", False)).run()
 
     def test_spot_checked(self):  # SUBSYSTEM_TAGS.md 4, checked by hand
-        for va, want in [(0x0302225C, "Audio/tones"), (0x0300C2CC, "Baseband registers"),
-                         (0x0302F370, "Scanning"), (0x0301C98C, "CPS/USB"), (0x0305E6DC, "UI/status"),
+        # 0300C2CC and 0301C98C were reviewed in pass 3 (P1) and are no longer tagged; two still-unreviewed rows
+        # of other tags replace them (SUBSYSTEM_TAGS.md 8).
+        for va, want in [(0x0302225C, "Audio/tones"), (0x00014208, "Audio/vocoder"),
+                         (0x0302F370, "Scanning"), (0x0300EEA4, "Main loop"), (0x0305E6DC, "UI/status"),
                          (0x030683AC, "shared (UI tasks)")]:
             t = self.tags[va]
             self.assertEqual((t.tag, t.confident), (want, True), f"{va:08X}")

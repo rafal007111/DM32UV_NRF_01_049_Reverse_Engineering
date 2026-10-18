@@ -515,6 +515,19 @@ each menu scene that renders a frequency/scan/channel label (the deep-frame scen
 a reset or corruption. This is RX-only *only* because the Rx Only channel blocks the transmitter; without that it
 would transmit and is an owner decision.
 
+#### 3.10.10 Pass-3 P1 review of TS/CC-relevant code (2026-10-18; `HUB_FUNCTIONS.md` §8)
+
+The 154 unreviewed functions tagged Codeplug/channels, Baseband registers, shared (DMR tasks), CPS/USB and Digital
+RX/TX were read (code-verified accesses). Result for this design: **no change** to the behaviour (§1), the storage
+(§2), the site lists (§3.8.5, §3.9) or the risk rules (§3.10.1–§3.10.9).
+
+- None of them reads or writes `33CCC`, `33CCD`, `3BEA8`, `3C620…3C627`, `3C61A`, `3BEAB` or `LOCAL_CC`.
+- New read-only subjects (TX inputs found in this pass): `030237AC` (TX slot chooser input `3C616` = sync type of the
+  last burst; the same value for both slots of a repeater, so TS Match off does not change it) and the DCDM
+  channel-timing chain `03024120…03024794` with its timer callbacks (RX mode 4 only; it transmits CT_CSBKs on its own,
+  `TX_PATHS.md` §9). The complete read-only list is now §3.10.1 + §3.8.3 + these two.
+- The menu insertion point (§2, Other Func entries 22/23) and its tables are mapped in [UI_MAP.md](UI_MAP.md).
+
 ## 4. Code and RAM placement (constraints found)
 
 - The installed Scan Zone module occupies `030DFCEC..030E0E56` inside a `0x1800` window ending at `030E14EC`.
